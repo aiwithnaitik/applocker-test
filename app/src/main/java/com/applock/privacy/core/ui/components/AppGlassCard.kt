@@ -25,11 +25,17 @@ fun AppGlassCard(
     modifier: Modifier = Modifier,
     shape: RoundedCornerShape = SquircleShape,
     borderBrush: Brush = GlassBorderGradient,
+    borderColor: Color? = null,
     borderWidth: Dp = 1.dp,
     backgroundColor: Color = SurfaceGlass,
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
+    val effectiveBorderStroke = if (borderColor != null) {
+        BorderStroke(borderWidth, borderColor)
+    } else {
+        BorderStroke(borderWidth, borderBrush)
+    }
     val clickableModifier = if (onClick != null) {
         Modifier.clickable(onClick = onClick)
     } else {
@@ -40,7 +46,7 @@ fun AppGlassCard(
         modifier = modifier
             .clip(shape)
             .background(backgroundColor)
-            .border(BorderStroke(borderWidth, borderBrush), shape)
+            .border(effectiveBorderStroke, shape)
             .then(clickableModifier)
             .padding(18.dp)
     ) {

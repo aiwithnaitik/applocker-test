@@ -11,6 +11,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build & Generate APK
@@ -43,3 +46,16 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 14
           if-no-files-found: error
+
+      - name: Publish Direct APK to GitHub Releases (For In-App Auto-Update)
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: latest
+          name: "AppLock Latest (${{ github.run_number }})"
+          body: "Automated continuous build for AppLock. Run #${{ github.run_number }} from commit ${{ github.sha }}."
+          files: app/build/outputs/apk/debug/*.apk
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

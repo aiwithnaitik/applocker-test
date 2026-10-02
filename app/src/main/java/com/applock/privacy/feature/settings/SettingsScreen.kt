@@ -28,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -188,6 +189,34 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(14.dp))
+            Divider()
+            Spacer(modifier = Modifier.height(4.dp))
+
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+            val updateManager = androidx.compose.runtime.remember { com.applock.privacy.core.updater.AppUpdateManager(context) }
+            val updateState by updateManager.updateState.collectAsState()
+
+            SettingNavigationItem(
+                title = "Check for Updates",
+                subtitle = when (updateState) {
+                    is com.applock.privacy.core.updater.UpdateState.Checking -> "Checking GitHub..."
+                    is com.applock.privacy.core.updater.UpdateState.UpdateAvailable -> "Update available! Tap to download"
+                    is com.applock.privacy.core.updater.UpdateState.UpToDate -> "App is up to date"
+                    else -> "Tap to scan for new builds"
+                },
+                icon = androidx.compose.material.icons.Icons.Default.SystemUpdate,
+                onClick = {
+                    coroutineScope.launch {
+                        val info = updateManager.checkForUpdates()
+                        if (info != null && info.hasUpdate) {
+                            updateManager.downloadAndInstall(info)
+                        }
+                    }
+                }
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))

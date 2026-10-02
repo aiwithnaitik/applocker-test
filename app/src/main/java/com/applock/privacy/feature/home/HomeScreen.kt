@@ -54,12 +54,33 @@ import com.applock.privacy.core.ui.theme.TextMuted
 import com.applock.privacy.core.ui.theme.TextPrimary
 import com.applock.privacy.core.ui.theme.TextSecondary
 
+import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import com.applock.privacy.core.ui.components.AppOutlinedButton
+import com.applock.privacy.core.updater.AppUpdateManager
+import com.applock.privacy.core.updater.UpdateState
+import kotlinx.coroutines.launch
+
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val updateManager = remember { AppUpdateManager(context) }
+    val updateState by updateManager.updateState.collectAsState()
+
     var isMasterProtectionEnabled by remember { mutableStateOf(true) }
     val scrollState = rememberScrollState()
+
+    // Automatically check for updates on startup
+    LaunchedEffect(Unit) {
+        updateManager.checkForUpdates()
+    }
 
     Column(
         modifier = modifier
@@ -79,6 +100,113 @@ fun HomeScreen(
         )
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        // In-App Update Banner (When an update is detected or downloading)
+        when (val state = updateState) {
+            is UpdateState.UpdateAvailable -> {
+                AppGlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    borderColor = ElectricCyan
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(ElectricCyan.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SystemUpdate,
+                                contentDescription = null,
+                                tint = ElectricCyan,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "New Update Available!",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = state.info.releaseName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = ElectricCyan,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    AppGradientButton(
+                        text = "1-Tap Update App",
+                        onClick = {
+                            coroutineScope.launch {
+                                updateManager.downloadAndInstall(state.info)
+                            }
+                        },
+                        height = 44.dp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            is UpdateState.Downloading -> {
+                AppGlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Downloading Update... ${(state.progress * 100).toInt()}%",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = { state.progress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(PillShape),
+                        color = ElectricCyan,
+                        trackColor = SurfaceCard
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            is UpdateState.ReadyToInstall -> {
+                AppGlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Update Ready to Install",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = EmeraldSecure
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    AppGradientButton(
+                        text = "Install Now",
+                        onClick = { updateManager.launchInstaller(state.apkFile) },
+                        height = 44.dp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            else -> {
+                // Idle or Checking - no banner needed
+            }
+        }
 
         // Hero Glassmorphism Shield Card
         AppGlassCard(
