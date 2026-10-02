@@ -1,46 +1,347 @@
 package com.applock.privacy.feature.settings
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.applock.privacy.core.ui.components.AppCard
+import androidx.compose.ui.unit.sp
+import com.applock.privacy.R
+import com.applock.privacy.core.ui.components.AppGlassCard
+import com.applock.privacy.core.ui.components.AppStatusBadge
+import com.applock.privacy.core.ui.components.AppSwitch
 import com.applock.privacy.core.ui.components.AppTopBar
+import com.applock.privacy.core.ui.theme.BackgroundDeep
+import com.applock.privacy.core.ui.theme.BorderSubtle
+import com.applock.privacy.core.ui.theme.ElectricCyan
+import com.applock.privacy.core.ui.theme.EmeraldSecure
+import com.applock.privacy.core.ui.theme.TextMuted
+import com.applock.privacy.core.ui.theme.TextPrimary
+import com.applock.privacy.core.ui.theme.TextSecondary
 
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
+    var isBiometricsEnabled by remember { mutableStateOf(true) }
+    var isHapticEnabled by remember { mutableStateOf(true) }
+    val scrollState = rememberScrollState()
+
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp)
+            .background(BackgroundDeep)
+            .padding(horizontal = 16.dp)
+            .verticalScroll(scrollState)
     ) {
         AppTopBar(title = "Settings")
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        AppCard(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = "Security & Preferences",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
+        // Security Category
+        Text(
+            text = "Authentication & Security",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        AppGlassCard(modifier = Modifier.fillMaxWidth()) {
+            SettingToggleItem(
+                title = "Biometric Authentication",
+                subtitle = "Use fingerprint or face recognition to unlock",
+                icon = Icons.Default.Fingerprint,
+                checked = isBiometricsEnabled,
+                onCheckedChange = { isBiometricsEnabled = it }
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Security settings, PIN reset, biometric toggles, and notification preferences.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+
+            Divider()
+
+            SettingNavigationItem(
+                title = "Change PIN / Pattern",
+                subtitle = "Update your primary lock code",
+                icon = Icons.Default.Lock,
+                onClick = {}
+            )
+
+            Divider()
+
+            SettingToggleItem(
+                title = "Haptic Vibration",
+                subtitle = "Vibrate on button taps and unlock success",
+                icon = Icons.Default.Vibration,
+                checked = isHapticEnabled,
+                onCheckedChange = { isHapticEnabled = it }
             )
         }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // System Permissions Category
+        Text(
+            text = "System Permissions",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        AppGlassCard(modifier = Modifier.fillMaxWidth()) {
+            PermissionStatusItem(
+                title = "Usage Access",
+                subtitle = "Detect when protected apps are opened",
+                badgeText = "SETUP (PHASE 4)",
+                badgeColor = ElectricCyan
+            )
+
+            Divider()
+
+            PermissionStatusItem(
+                title = "Display Over Other Apps",
+                subtitle = "Show lock screen over protected apps",
+                badgeText = "SETUP (PHASE 4)",
+                badgeColor = ElectricCyan
+            )
+
+            Divider()
+
+            PermissionStatusItem(
+                title = "Battery Optimization",
+                subtitle = "Keep protection active in background",
+                badgeText = "RECOMMENDED",
+                badgeColor = EmeraldSecure
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // About Card
+        AppGlassCard(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.app_logo),
+                        contentDescription = "AppLock",
+                        modifier = Modifier.size(46.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column {
+                    Text(
+                        text = "AppLock Secure",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "Version 1.0.0 • Phase 2 Foundation",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextMuted,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
+}
+
+@Composable
+private fun SettingToggleItem(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(ElectricCyan.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = ElectricCyan,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextMuted,
+                    fontSize = 12.sp
+                )
+            }
+        }
+        AppSwitch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun SettingNavigationItem(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(ElectricCyan.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = ElectricCyan,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextMuted,
+                    fontSize = 12.sp
+                )
+            }
+        }
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = TextMuted,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun PermissionStatusItem(
+    title: String,
+    subtitle: String,
+    badgeText: String,
+    badgeColor: androidx.compose.ui.graphics.Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextMuted,
+                fontSize = 12.sp
+            )
+        }
+        AppStatusBadge(text = badgeText, color = badgeColor, showDot = false)
+    }
+}
+
+@Composable
+private fun Divider() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(BorderSubtle.copy(alpha = 0.4f))
+    )
 }

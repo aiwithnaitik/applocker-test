@@ -1,5 +1,6 @@
 package com.applock.privacy.feature.home
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,131 +13,312 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.RemoveRedEye
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.applock.privacy.core.ui.components.AppCard
+import androidx.compose.ui.unit.sp
+import com.applock.privacy.R
+import com.applock.privacy.core.ui.components.AppGlassCard
+import com.applock.privacy.core.ui.components.AppGradientButton
+import com.applock.privacy.core.ui.components.AppStatusBadge
+import com.applock.privacy.core.ui.components.AppSwitch
 import com.applock.privacy.core.ui.components.AppTopBar
+import com.applock.privacy.core.ui.theme.AmberWarning
+import com.applock.privacy.core.ui.theme.BackgroundDeep
+import com.applock.privacy.core.ui.theme.BorderSubtle
+import com.applock.privacy.core.ui.theme.ElectricCyan
+import com.applock.privacy.core.ui.theme.EmeraldSecure
+import com.applock.privacy.core.ui.theme.SurfaceCard
+import com.applock.privacy.core.ui.theme.TextMuted
+import com.applock.privacy.core.ui.theme.TextPrimary
+import com.applock.privacy.core.ui.theme.TextSecondary
 
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
+    var isMasterProtectionEnabled by remember { mutableStateOf(true) }
+    val scrollState = rememberScrollState()
+
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp)
+            .background(BackgroundDeep)
+            .padding(horizontal = 16.dp)
+            .verticalScroll(scrollState)
     ) {
-        AppTopBar(title = "AppLock")
+        AppTopBar(
+            title = "AppLock",
+            actions = {
+                AppStatusBadge(
+                    text = if (isMasterProtectionEnabled) "SHIELD ON" else "PAUSED",
+                    color = if (isMasterProtectionEnabled) EmeraldSecure else AmberWarning
+                )
+            }
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Protection Status Card
-        AppCard(
+        // Hero Glassmorphism Shield Card
+        AppGlassCard(
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Shield,
-                        contentDescription = "Protection Status",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(32.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(60.dp)
+                            .clip(RoundedCornerShape(16.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.app_logo),
+                            contentDescription = "AppLock Padlock",
+                            modifier = Modifier.size(60.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Column {
+                        Text(
+                            text = if (isMasterProtectionEnabled) "System Shielded" else "Protection Paused",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = if (isMasterProtectionEnabled) "App monitor standing by" else "Tap toggle to enable",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Column {
-                    Text(
-                        text = "AppLock Protection",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Foundation Ready (Phase 1)",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                }
+                AppSwitch(
+                    checked = isMasterProtectionEnabled,
+                    onCheckedChange = { isMasterProtectionEnabled = it }
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
+        // Security Metrics Row
         Text(
-            text = "Quick Overview",
-            style = MaterialTheme.typography.titleLarge,
+            text = "Protection Metrics",
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
+            color = TextPrimary
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            AppCard(modifier = Modifier.weight(1f)) {
-                Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Locked Apps",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-                Text(
-                    text = "0",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+            MetricCard(
+                title = "Locked",
+                value = "0 Apps",
+                icon = Icons.Default.Lock,
+                accentColor = ElectricCyan,
+                modifier = Modifier.weight(1f)
+            )
+
+            MetricCard(
+                title = "Security",
+                value = "98%",
+                icon = Icons.Default.Security,
+                accentColor = EmeraldSecure,
+                modifier = Modifier.weight(1f)
+            )
+
+            MetricCard(
+                title = "Intruders",
+                value = "0 Alert",
+                icon = Icons.Default.RemoveRedEye,
+                accentColor = AmberWarning,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Recommended Apps Quick Lock Card
+        Text(
+            text = "Suggested Privacy Targets",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        AppGlassCard(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "Secure Your Sensitive Apps",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Instant 1-tap lock protection for social, messaging, and financial apps.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextMuted
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val sampleApps = listOf(
+                Pair("WhatsApp", "Messaging & Calls"),
+                Pair("Photos & Gallery", "Private Media"),
+                Pair("Instagram", "Social Feed"),
+                Pair("Banking & Wallet", "Finance")
+            )
+
+            sampleApps.forEachIndexed { index, (appName, category) ->
+                var isAppLocked by remember { mutableStateOf(false) }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(SurfaceCard),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Shield,
+                                contentDescription = null,
+                                tint = if (isAppLocked) ElectricCyan else TextMuted,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Text(
+                                text = appName,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = category,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextMuted,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+
+                    AppSwitch(
+                        checked = isAppLocked,
+                        onCheckedChange = { isAppLocked = it }
+                    )
+                }
+
+                if (index < sampleApps.size - 1) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(BorderSubtle.copy(alpha = 0.5f))
+                    )
+                }
             }
 
-            AppCard(modifier = Modifier.weight(1f)) {
-                Icon(
-                    imageVector = Icons.Default.Shield,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "System Status",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-                Text(
-                    text = "Active",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            AppGradientButton(
+                text = "Lock All Suggested Apps",
+                onClick = { /* Will connect to Phase 6 App Selection */ }
+            )
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun MetricCard(
+    title: String,
+    value: String,
+    icon: ImageVector,
+    accentColor: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier
+) {
+    AppGlassCard(
+        modifier = modifier
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(accentColor.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accentColor,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextMuted,
+            fontSize = 11.sp
+        )
+
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary
+        )
     }
 }

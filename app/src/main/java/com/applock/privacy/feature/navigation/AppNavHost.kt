@@ -17,6 +17,7 @@ fun AppNavHost() {
     val navController = rememberNavController()
 
     Scaffold(
+        containerColor = com.applock.privacy.core.ui.theme.BackgroundDeep,
         bottomBar = {
             BottomNavBar(navController = navController)
         }

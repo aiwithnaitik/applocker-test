@@ -1,24 +1,47 @@
 package com.applock.privacy.core.ui.theme
 
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// Primary brand colors
-val IndigoPrimary = Color(0xFF6366F1)
-val IndigoDark = Color(0xFF4F46E5)
-val EmeraldAccent = Color(0xFF10B981)
-val RoseError = Color(0xFFF43F5E)
+// Sapphire & Cyan Brand Colors inspired by Logo
+val ElectricCyan = Color(0xFF00E5FF)
+val BrightAzure = Color(0xFF0084FF)
+val DeepSapphire = Color(0xFF1D4ED8)
+val NeonIce = Color(0xFFBAE6FD)
 
-// Dark theme palette
-val BackgroundDark = Color(0xFF0F172A)
-val SurfaceDark = Color(0xFF1E293B)
-val SurfaceDarkHover = Color(0xFF334155)
-val TextPrimaryDark = Color(0xFFF8FAFC)
-val TextSecondaryDark = Color(0xFF94A3B8)
-val BorderDark = Color(0xFF334155)
+// Gradients
+val PrimaryGradient = Brush.horizontalGradient(
+    colors = listOf(BrightAzure, ElectricCyan)
+)
+val CardGradient = Brush.verticalGradient(
+    colors = listOf(Color(0xFF0D1B3E), Color(0xFF070F24))
+)
+val GlassBorderGradient = Brush.linearGradient(
+    colors = listOf(Color(0x6638BDF8), Color(0x1A1E3A8A), Color(0x3300E5FF))
+)
+val GlowGradient = Brush.radialGradient(
+    colors = listOf(Color(0x4D00D2FF), Color(0x00040816))
+)
 
-// Light theme palette
-val BackgroundLight = Color(0xFFF8FAFC)
-val SurfaceLight = Color(0xFFFFFFFF)
-val TextPrimaryLight = Color(0xFF0F172A)
-val TextSecondaryLight = Color(0xFF64748B)
-val BorderLight = Color(0xFFE2E8F0)
+// Background & Surface
+val BackgroundDeep = Color(0xFF030714)
+val BackgroundSurface = Color(0xFF070F26)
+val SurfaceCard = Color(0xFF0B1736)
+val SurfaceCardHover = Color(0xFF11224D)
+val SurfaceGlass = Color(0xCC0B1736)
+
+// Functional & Semantic
+val EmeraldSecure = Color(0xFF10B981)
+val AmberWarning = Color(0xFFF59E0B)
+val RoseDestructive = Color(0xFFF43F5E)
+
+// Text
+val TextPrimary = Color(0xFFF8FAFC)
+val TextSecondary = Color(0xFF94A3B8)
+val TextMuted = Color(0xFF64748B)
+val TextAccent = ElectricCyan
+
+// Borders & Dividers
+val BorderSubtle = Color(0x3338BDF8)
+val BorderHighlight = Color(0x6600E5FF)
+val DividerDark = Color(0xFF1E293B)
