@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">AppLock</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_tools">Tools</string>
+    <string name="nav_themes">Themes</string>
+    <string name="nav_settings">Settings</string>
+</resources>
