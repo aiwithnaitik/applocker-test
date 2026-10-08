@@ -139,15 +139,7 @@ fun MediaVaultScreen(
         ) {
             AppTopBar(
                 title = "Private Media Vault",
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = TextPrimary
-                        )
-                    }
-                }
+                onNavigateBack = onNavigateBack
             )
 
             Spacer(modifier = Modifier.height(10.dp))

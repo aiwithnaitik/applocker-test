@@ -59,9 +59,11 @@ import com.applock.privacy.core.ui.components.AppStatusBadge
 import com.applock.privacy.core.ui.components.AppTopBar
 import com.applock.privacy.core.ui.theme.AmberWarning
 import com.applock.privacy.core.ui.theme.BackgroundDeep
+import com.applock.privacy.core.ui.theme.BorderSubtle
 import com.applock.privacy.core.ui.theme.BrightAzure
 import com.applock.privacy.core.ui.theme.ElectricCyan
 import com.applock.privacy.core.ui.theme.EmeraldSecure
+import com.applock.privacy.core.ui.theme.SurfaceCard
 import com.applock.privacy.core.ui.theme.TextMuted
 import com.applock.privacy.core.ui.theme.TextPrimary
 import com.applock.privacy.core.ui.theme.TextSecondary
@@ -96,15 +98,7 @@ fun ProSubscriptionScreen(
     ) {
         AppTopBar(
             title = "Pro Membership",
-            navigationIcon = {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = TextPrimary
-                    )
-                }
-            }
+            onNavigateBack = onNavigateBack
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -308,8 +302,7 @@ fun ProSubscriptionScreen(
                     }
                     AppStatusBadge(
                         text = "VIP ACTIVE",
-                        containerColor = EmeraldSecure.copy(alpha = 0.2f),
-                        contentColor = EmeraldSecure
+                        color = EmeraldSecure
                     )
                 }
             }
@@ -386,8 +379,8 @@ private fun PlanCard(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val borderColor = if (isSelected) BrightAzure else Color(0xFF27272A)
-    val bgColor = if (isSelected) Color(0xFF1E293B) else com.applock.privacy.core.ui.theme.CardBackground
+    val borderColor = if (isSelected) BrightAzure else BorderSubtle
+    val bgColor = if (isSelected) Color(0xFFEFF6FF) else SurfaceCard
 
     Box(
         modifier = Modifier

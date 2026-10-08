@@ -78,6 +78,7 @@ import com.applock.privacy.core.ui.components.AppSwitch
 import com.applock.privacy.core.ui.components.AppTopBar
 import com.applock.privacy.core.ui.theme.BackgroundDeep
 import com.applock.privacy.core.ui.theme.BorderSubtle
+import com.applock.privacy.core.ui.theme.BrightAzure
 import com.applock.privacy.core.ui.theme.ElectricCyan
 import com.applock.privacy.core.ui.theme.EmeraldSecure
 import com.applock.privacy.core.ui.theme.PillShape
@@ -178,7 +179,8 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
-                .background(if (isProUser) Color(0xFF1E1B4B) else Color(0xFF18181B))
+                .background(if (isProUser) Color(0xFFEFF6FF) else SurfaceCard)
+                .border(1.dp, if (isProUser) BrightAzure.copy(alpha = 0.5f) else BorderSubtle, RoundedCornerShape(16.dp))
                 .clickable { onNavigateToProSubscription() }
                 .padding(16.dp)
         ) {
@@ -224,8 +226,7 @@ fun SettingsScreen(
 
                 AppStatusBadge(
                     text = if (isProUser) "VIP ACTIVE" else "UPGRADE",
-                    containerColor = if (isProUser) EmeraldSecure.copy(alpha = 0.2f) else BrightAzure.copy(alpha = 0.2f),
-                    contentColor = if (isProUser) EmeraldSecure else BrightAzure
+                    color = if (isProUser) EmeraldSecure else BrightAzure
                 )
             }
         }

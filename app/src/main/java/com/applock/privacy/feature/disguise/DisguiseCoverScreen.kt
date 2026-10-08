@@ -56,9 +56,11 @@ import com.applock.privacy.core.ui.components.AppSwitch
 import com.applock.privacy.core.ui.components.AppTopBar
 import com.applock.privacy.core.ui.theme.AmberWarning
 import com.applock.privacy.core.ui.theme.BackgroundDeep
+import com.applock.privacy.core.ui.theme.BorderSubtle
 import com.applock.privacy.core.ui.theme.BrightAzure
 import com.applock.privacy.core.ui.theme.ElectricCyan
 import com.applock.privacy.core.ui.theme.EmeraldSecure
+import com.applock.privacy.core.ui.theme.SurfaceCard
 import com.applock.privacy.core.ui.theme.TextMuted
 import com.applock.privacy.core.ui.theme.TextPrimary
 import com.applock.privacy.core.ui.theme.TextSecondary
@@ -91,7 +93,6 @@ fun DisguiseCoverScreen(
 
     if (previewMode == DisguiseMode.CALCULATOR) {
         CalculatorDecoyCover(
-            userPin = "1234",
             onBypass = { previewMode = null }
         )
         return
@@ -108,15 +109,7 @@ fun DisguiseCoverScreen(
     ) {
         AppTopBar(
             title = "Disguise Decoy",
-            navigationIcon = {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = TextPrimary
-                    )
-                }
-            }
+            onNavigateBack = onNavigateBack
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -288,8 +281,8 @@ private fun DecoyOptionCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(com.applock.privacy.core.ui.theme.CardBackground)
-            .border(1.5.dp, borderColor, RoundedCornerShape(16.dp))
+            .background(SurfaceCard)
+            .border(1.5.dp, if (isSelected) BrightAzure else BorderSubtle, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
             .padding(16.dp)
     ) {

@@ -81,15 +81,7 @@ fun UninstallProtectionScreen(
     ) {
         AppTopBar(
             title = "Uninstall Protection",
-            navigationIcon = {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = TextPrimary
-                    )
-                }
-            }
+            onNavigateBack = onNavigateBack
         )
 
         Spacer(modifier = Modifier.height(16.dp))
