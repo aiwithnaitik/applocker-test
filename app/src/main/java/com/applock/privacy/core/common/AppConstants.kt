@@ -13,4 +13,5 @@ object AppConstants {
     const val ROUTE_TOOLS = "tools"
     const val ROUTE_THEMES = "themes"
     const val ROUTE_SETTINGS = "settings"
+    const val ROUTE_PERMISSIONS = "permissions"
 }

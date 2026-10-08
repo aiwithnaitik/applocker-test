@@ -17,6 +17,7 @@ import com.applock.privacy.feature.home.HomeScreen
 import com.applock.privacy.feature.onboarding.OnboardingCompleteScreen
 import com.applock.privacy.feature.onboarding.OnboardingReasonScreen
 import com.applock.privacy.feature.onboarding.SplashScreen
+import com.applock.privacy.feature.permissions.PermissionScreen
 import com.applock.privacy.feature.settings.SettingsScreen
 import com.applock.privacy.feature.themes.ThemesScreen
 import com.applock.privacy.feature.tools.ToolsScreen
@@ -87,9 +88,22 @@ fun AppNavHost() {
                 )
             }
 
+            // Permissions Flow
+            composable(AppConstants.ROUTE_PERMISSIONS) {
+                PermissionScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
             // Main App Shell Routes
             composable(Screen.Home.route) {
-                HomeScreen()
+                HomeScreen(
+                    onNavigateToPermissions = {
+                        navController.navigate(AppConstants.ROUTE_PERMISSIONS)
+                    }
+                )
             }
 
             composable(Screen.Tools.route) {
@@ -102,6 +116,9 @@ fun AppNavHost() {
 
             composable(Screen.Settings.route) {
                 SettingsScreen(
+                    onNavigateToPermissions = {
+                        navController.navigate(AppConstants.ROUTE_PERMISSIONS)
+                    },
                     onResetOnboarding = {
                         navController.navigate(AppConstants.ROUTE_SPLASH) {
                             popUpTo(Screen.Home.route) { inclusive = true }

@@ -57,20 +57,51 @@ import com.applock.privacy.core.ui.theme.EmeraldSecure
 import com.applock.privacy.core.ui.theme.TextMuted
 import com.applock.privacy.core.ui.theme.TextPrimary
 import com.applock.privacy.core.ui.theme.TextSecondary
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.applock.privacy.core.permission.PermissionManager
 import com.applock.privacy.data.local.AppPreferencesDataSource
+import com.applock.privacy.feature.auth.PinSetupDialog
 import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
+    onNavigateToPermissions: () -> Unit = {},
     onResetOnboarding: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
     val preferencesDataSource = remember { AppPreferencesDataSource(context) }
-    var isBiometricsEnabled by remember { mutableStateOf(true) }
+    val isBiometricsEnabled by preferencesDataSource.isBiometricEnabledFlow.collectAsState(initial = true)
+    val hasPinConfigured by preferencesDataSource.hasPinConfiguredFlow.collectAsState(initial = false)
     var isHapticEnabled by remember { mutableStateOf(true) }
+    var showPinDialog by remember { mutableStateOf(false) }
+    var permissionStatus by remember { mutableStateOf(PermissionManager.getPermissionStatus(context)) }
     val scrollState = rememberScrollState()
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                permissionStatus = PermissionManager.getPermissionStatus(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    if (showPinDialog) {
+        PinSetupDialog(
+            preferencesDataSource = preferencesDataSource,
+            onDismissRequest = { showPinDialog = false },
+            onPinCreated = { showPinDialog = false }
+        )
+    }
 
     Column(
         modifier = modifier
@@ -99,16 +130,20 @@ fun SettingsScreen(
                 subtitle = "Use fingerprint or face recognition to unlock",
                 icon = Icons.Default.Fingerprint,
                 checked = isBiometricsEnabled,
-                onCheckedChange = { isBiometricsEnabled = it }
+                onCheckedChange = {
+                    coroutineScope.launch {
+                        preferencesDataSource.setBiometricEnabled(it)
+                    }
+                }
             )
 
             Divider()
 
             SettingNavigationItem(
-                title = "Change PIN / Pattern",
-                subtitle = "Update your primary lock code",
+                title = if (hasPinConfigured) "Change Security PIN" else "Set Up Security PIN",
+                subtitle = if (hasPinConfigured) "Update your 4-digit security code" else "Create a 4-digit code to lock apps",
                 icon = Icons.Default.Lock,
-                onClick = {}
+                onClick = { showPinDialog = true }
             )
 
             Divider()
@@ -138,8 +173,9 @@ fun SettingsScreen(
             PermissionStatusItem(
                 title = "Usage Access",
                 subtitle = "Detect when protected apps are opened",
-                badgeText = "SETUP (PHASE 4)",
-                badgeColor = ElectricCyan
+                badgeText = if (permissionStatus.hasUsageAccess) "ACTIVE" else "GRANT",
+                badgeColor = if (permissionStatus.hasUsageAccess) EmeraldSecure else ElectricCyan,
+                onClick = onNavigateToPermissions
             )
 
             Divider()
@@ -147,8 +183,9 @@ fun SettingsScreen(
             PermissionStatusItem(
                 title = "Display Over Other Apps",
                 subtitle = "Show lock screen over protected apps",
-                badgeText = "SETUP (PHASE 4)",
-                badgeColor = ElectricCyan
+                badgeText = if (permissionStatus.hasOverlay) "ACTIVE" else "GRANT",
+                badgeColor = if (permissionStatus.hasOverlay) EmeraldSecure else ElectricCyan,
+                onClick = onNavigateToPermissions
             )
 
             Divider()
@@ -156,8 +193,9 @@ fun SettingsScreen(
             PermissionStatusItem(
                 title = "Battery Optimization",
                 subtitle = "Keep protection active in background",
-                badgeText = "RECOMMENDED",
-                badgeColor = EmeraldSecure
+                badgeText = if (permissionStatus.isBatteryOptimizedIgnored) "OPTIMIZED" else "ENABLE",
+                badgeColor = if (permissionStatus.isBatteryOptimizedIgnored) EmeraldSecure else ElectricCyan,
+                onClick = onNavigateToPermissions
             )
         }
 
@@ -372,11 +410,13 @@ private fun PermissionStatusItem(
     title: String,
     subtitle: String,
     badgeText: String,
-    badgeColor: androidx.compose.ui.graphics.Color
+    badgeColor: androidx.compose.ui.graphics.Color,
+    onClick: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onClick() }
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
