@@ -37,20 +37,16 @@ jobs:
           cache-read-only: false
 
       - name: Build Debug APK with Gradle
-        id: gradle_build
         run: |
+          set -o pipefail
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace 2>&1 | tee build_output.log
-        continue-on-error: true
-
-      - name: Report Build Output on Failure
-        if: steps.gradle_build.outcome == 'failure'
-        run: |
-          echo "### Gradle Build Failed" >> $GITHUB_STEP_SUMMARY
-          echo '```text' >> $GITHUB_STEP_SUMMARY
-          tail -n 80 build_output.log >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          exit 1
+          ./gradlew assembleDebug --stacktrace 2>&1 | tee build.log || {
+            echo "### Gradle Build Error" >> $GITHUB_STEP_SUMMARY
+            echo '```text' >> $GITHUB_STEP_SUMMARY
+            tail -n 120 build.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          }
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
