@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import android.os.Build
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.BatteryAlert
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.QueryStats
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -148,6 +150,50 @@ fun PermissionScreen(
                 PermissionManager.openUsageAccessSettings(context)
             }
         )
+
+        // Android 13/14/15 Restricted Settings Guidance Card
+        if (!permissionStatus.hasUsageAccess && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Spacer(modifier = Modifier.height(10.dp))
+            AppGlassCard(
+                modifier = Modifier.fillMaxWidth(),
+                borderColor = androidx.compose.ui.graphics.Color(0xFFFFB74D)
+            ) {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Security,
+                            contentDescription = null,
+                            tint = androidx.compose.ui.graphics.Color(0xFFFFB74D),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Blocked by Android 13+ 'Restricted setting'?",
+                            color = androidx.compose.ui.graphics.Color(0xFFFFB74D),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Android blocks Usage Access on sideloaded apps by default. To unlock it:\n" +
+                                "1. Tap 'Open App Info' below\n" +
+                                "2. Tap the 3 dots (⋮) in the top-right corner\n" +
+                                "3. Tap 'Allow restricted settings'\n" +
+                                "4. Come back here and tap 'Grant' on Usage Access!",
+                        color = TextSecondary,
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    AppGradientButton(
+                        text = "Open App Info (3 Dots)",
+                        onClick = { PermissionManager.openAppSettings(context) },
+                        height = 36.dp
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(14.dp))
 

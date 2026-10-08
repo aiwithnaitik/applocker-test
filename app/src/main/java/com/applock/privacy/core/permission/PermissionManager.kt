@@ -145,4 +145,19 @@ object PermissionManager {
             context.startActivity(fallback)
         }
     }
+
+    /**
+     * Opens Android App Details page where user can tap 3 dots -> 'Allow restricted settings'.
+     */
+    fun openAppSettings(context: Context) {
+        val intent = Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.parse("package:${context.packageName}")
+        ).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        try {
+            context.startActivity(intent)
+        } catch (_: Exception) {}
+    }
 }
