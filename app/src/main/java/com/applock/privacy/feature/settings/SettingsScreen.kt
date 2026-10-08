@@ -22,10 +22,10 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Vibration
-import kotlinx.coroutines.launch
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,11 +34,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -55,11 +57,17 @@ import com.applock.privacy.core.ui.theme.EmeraldSecure
 import com.applock.privacy.core.ui.theme.TextMuted
 import com.applock.privacy.core.ui.theme.TextPrimary
 import com.applock.privacy.core.ui.theme.TextSecondary
+import com.applock.privacy.data.local.AppPreferencesDataSource
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
+    onResetOnboarding: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val preferencesDataSource = remember { AppPreferencesDataSource(context) }
     var isBiometricsEnabled by remember { mutableStateOf(true) }
     var isHapticEnabled by remember { mutableStateOf(true) }
     val scrollState = rememberScrollState()
@@ -196,9 +204,7 @@ fun SettingsScreen(
             Divider()
             Spacer(modifier = Modifier.height(4.dp))
 
-            val context = androidx.compose.ui.platform.LocalContext.current
-            val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
-            val updateManager = androidx.compose.runtime.remember { com.applock.privacy.core.updater.AppUpdateManager(context) }
+            val updateManager = remember { com.applock.privacy.core.updater.AppUpdateManager(context) }
             val updateState by updateManager.updateState.collectAsState()
 
             SettingNavigationItem(
@@ -216,6 +222,32 @@ fun SettingsScreen(
                         if (info != null && info.hasUpdate) {
                             updateManager.downloadAndInstall(info)
                         }
+                    }
+                }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Developer & Test Utilities
+        Text(
+            text = "Testing & Diagnostics",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        AppGlassCard(modifier = Modifier.fillMaxWidth()) {
+            SettingNavigationItem(
+                title = "Restart Onboarding Flow",
+                subtitle = "Reset onboarding state to test splash and intro screens",
+                icon = Icons.Default.Refresh,
+                onClick = {
+                    coroutineScope.launch {
+                        preferencesDataSource.resetOnboarding()
+                        onResetOnboarding?.invoke()
                     }
                 }
             )
