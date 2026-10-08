@@ -96,6 +96,8 @@ fun SettingsScreen(
     onNavigateToIntruderLogs: () -> Unit = {},
     onNavigateToNotificationShield: () -> Unit = {},
     onNavigateToWebsiteBlocker: () -> Unit = {},
+    onNavigateToDisguiseCover: () -> Unit = {},
+    onNavigateToProSubscription: () -> Unit = {},
     onResetOnboarding: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -104,7 +106,9 @@ fun SettingsScreen(
     val coroutineScope = rememberCoroutineScope()
     val preferencesDataSource = remember { AppPreferencesDataSource(context) }
 
+    val isProUser by preferencesDataSource.isProUserFlow.collectAsState(initial = false)
     val isBiometricsEnabled by preferencesDataSource.isBiometricEnabledFlow.collectAsState(initial = true)
+
     val hasPinConfigured by preferencesDataSource.hasPinConfiguredFlow.collectAsState(initial = false)
     val hasPatternConfigured by preferencesDataSource.hasPatternConfiguredFlow.collectAsState(initial = false)
     val lockType by preferencesDataSource.lockTypeFlow.collectAsState(initial = "pin")
@@ -167,7 +171,66 @@ fun SettingsScreen(
     ) {
         AppTopBar(title = "Settings")
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Pro VIP Status / Upgrade Banner (Phase 22)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(if (isProUser) Color(0xFF1E1B4B) else Color(0xFF18181B))
+                .clickable { onNavigateToProSubscription() }
+                .padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isProUser) Color(0xFFF59E0B).copy(alpha = 0.2f) else BrightAzure.copy(alpha = 0.15f)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Security,
+                            contentDescription = null,
+                            tint = if (isProUser) Color(0xFFF59E0B) else BrightAzure,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column {
+                        Text(
+                            text = if (isProUser) "AppLock VIP Member" else "Upgrade to AppLock Pro",
+                            color = TextPrimary,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (isProUser) "All premium protections active" else "Unlock Decoy Covers, unlimited rules & VIP tools",
+                            color = TextSecondary,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+
+                AppStatusBadge(
+                    text = if (isProUser) "VIP ACTIVE" else "UPGRADE",
+                    containerColor = if (isProUser) EmeraldSecure.copy(alpha = 0.2f) else BrightAzure.copy(alpha = 0.2f),
+                    contentColor = if (isProUser) EmeraldSecure else BrightAzure
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Security & Credentials
         Text(
@@ -181,11 +244,23 @@ fun SettingsScreen(
 
         AppGlassCard(modifier = Modifier.fillMaxWidth()) {
             SettingNavigationItem(
+                title = "Stealth Disguise Decoy",
+                subtitle = "Conceal lock screen behind Crash alert or Calculator",
+                icon = Icons.Default.VisibilityOff,
+                onClick = onNavigateToDisguiseCover
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+            Divider(color = BorderSubtle.copy(alpha = 0.5f))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            SettingNavigationItem(
                 title = if (hasPinConfigured) "Change Security PIN" else "Set Security PIN",
                 subtitle = if (hasPinConfigured) "Salted SHA-256 PIN active" else "Configure 4-digit master PIN",
                 icon = Icons.Default.Pin,
                 onClick = { showPinDialog = true }
             )
+
 
             Spacer(modifier = Modifier.height(10.dp))
             Divider(color = BorderSubtle.copy(alpha = 0.5f))

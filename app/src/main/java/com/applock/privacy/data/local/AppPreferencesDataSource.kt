@@ -67,7 +67,18 @@ class AppPreferencesDataSource(private val context: Context) {
         // Phase 19: Website Blocker
         val KEY_WEBSITE_BLOCKER_ENABLED = booleanPreferencesKey("website_blocker_enabled")
         val KEY_BLOCKED_WEBSITES_JSON = stringPreferencesKey("blocked_websites_json")
+
+        // Phase 21: Disguise Cover (Fake App Appearance)
+        val KEY_DISGUISE_MODE = stringPreferencesKey("disguise_mode") // "NONE", "CRASH_DIALOG", "CALCULATOR"
+        val KEY_DISGUISE_APPLOCK_ONLY = booleanPreferencesKey("disguise_applock_only")
+        val KEY_LAUNCHER_ALIAS = stringPreferencesKey("launcher_alias") // "default", "calculator", "notes"
+
+        // Phase 22: Pro Subscription
+        val KEY_IS_PRO_USER = booleanPreferencesKey("is_pro_user")
+        val KEY_PRO_PLAN_ID = stringPreferencesKey("pro_plan_id")
+        val KEY_PRO_EXPIRY_TIMESTAMP = longPreferencesKey("pro_expiry_timestamp")
     }
+
 
     val lockedPackagesFlow: Flow<Set<String>> = context.dataStore.data.map { preferences ->
         preferences[KEY_LOCKED_PACKAGES] ?: emptySet()
@@ -184,6 +195,33 @@ class AppPreferencesDataSource(private val context: Context) {
     val blockedWebsitesFlow: Flow<List<com.applock.privacy.feature.blocker.BlockedWebsite>> = context.dataStore.data.map { preferences ->
         com.applock.privacy.feature.blocker.BlockedWebsite.parseWebsitesJson(preferences[KEY_BLOCKED_WEBSITES_JSON])
     }
+
+    // Phase 21: Disguise Cover (Fake App Appearance)
+    val disguiseModeFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[KEY_DISGUISE_MODE] ?: "NONE"
+    }
+
+    val isDisguiseAppLockOnlyFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[KEY_DISGUISE_APPLOCK_ONLY] ?: false
+    }
+
+    val launcherAliasFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[KEY_LAUNCHER_ALIAS] ?: "default"
+    }
+
+    // Phase 22: Pro Subscription
+    val isProUserFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[KEY_IS_PRO_USER] ?: false
+    }
+
+    val proPlanIdFlow: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[KEY_PRO_PLAN_ID]
+    }
+
+    val proExpiryTimestampFlow: Flow<Long> = context.dataStore.data.map { preferences ->
+        preferences[KEY_PRO_EXPIRY_TIMESTAMP] ?: 0L
+    }
+
 
     // Mutators
     suspend fun setPackageLocked(packageName: String, isLocked: Boolean) {
@@ -476,4 +514,45 @@ class AppPreferencesDataSource(private val context: Context) {
             preferences[KEY_BLOCKED_WEBSITES_JSON] = com.applock.privacy.feature.blocker.BlockedWebsite.serializeWebsites(list)
         }
     }
+
+    // Phase 21: Disguise Cover Mutators
+    suspend fun setDisguiseMode(mode: String) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_DISGUISE_MODE] = mode
+        }
+    }
+
+    suspend fun setDisguiseAppLockOnly(appLockOnly: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_DISGUISE_APPLOCK_ONLY] = appLockOnly
+        }
+    }
+
+    suspend fun setLauncherAlias(alias: String) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_LAUNCHER_ALIAS] = alias
+        }
+    }
+
+    // Phase 22: Pro Subscription Mutators
+    suspend fun setProSubscription(isPro: Boolean, planId: String? = null, expiryTimestamp: Long = 0L) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_IS_PRO_USER] = isPro
+            if (planId != null) {
+                preferences[KEY_PRO_PLAN_ID] = planId
+            } else {
+                preferences.remove(KEY_PRO_PLAN_ID)
+            }
+            preferences[KEY_PRO_EXPIRY_TIMESTAMP] = expiryTimestamp
+        }
+    }
+
+    suspend fun clearProSubscription() {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_IS_PRO_USER] = false
+            preferences.remove(KEY_PRO_PLAN_ID)
+            preferences.remove(KEY_PRO_EXPIRY_TIMESTAMP)
+        }
+    }
 }
+

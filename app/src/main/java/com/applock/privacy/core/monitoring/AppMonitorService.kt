@@ -52,12 +52,22 @@ class AppMonitorService : Service() {
     private lateinit var preferencesDataSource: AppPreferencesDataSource
     private var screenOffReceiver: BroadcastReceiver? = null
 
+    @Volatile
+    private var isScreenOn = true
+
+    @Volatile
+    private var cachedIsMonitorEnabled = true
+
+    @Volatile
+    private var cachedLockedPackages: Set<String> = emptySet()
+
     override fun onCreate() {
         super.onCreate()
         preferencesDataSource = AppPreferencesDataSource(this)
         createNotificationChannel()
         startAsForeground()
         registerScreenStateReceiver()
+        observePreferencesHotState()
         startMonitoringLoop()
     }
 
@@ -121,58 +131,99 @@ class AppMonitorService : Service() {
         }
     }
 
+    private fun observePreferencesHotState() {
+
+        serviceScope.launch {
+            preferencesDataSource.isAppMonitorActiveFlow.collect { enabled ->
+                cachedIsMonitorEnabled = enabled
+            }
+        }
+        serviceScope.launch {
+            preferencesDataSource.lockedPackagesFlow.collect { packages ->
+                cachedLockedPackages = packages
+            }
+        }
+    }
+
     private fun registerScreenStateReceiver() {
         screenOffReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                if (intent?.action == Intent.ACTION_SCREEN_OFF) {
-                    // Lock all temporarily unlocked apps when device screen turns off
-                    AppLockSession.clearSession()
+                when (intent?.action) {
+                    Intent.ACTION_SCREEN_OFF -> {
+                        isScreenOn = false
+                        // Lock all temporarily unlocked apps when device screen turns off
+                        AppLockSession.clearSession()
+                    }
+                    Intent.ACTION_SCREEN_ON -> {
+                        isScreenOn = true
+                    }
                 }
             }
         }
-        val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+        }
         registerReceiver(screenOffReceiver, filter)
     }
 
     private fun startMonitoringLoop() {
         serviceScope.launch {
             val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
+            var lastObservedPackage: String? = null
 
             while (isActive) {
+                // Phase 24 Optimization: Screen-Off Battery Saver
+                // Completely pause active polling while screen is dark/idle
+                if (!isScreenOn) {
+                    delay(1500)
+                    continue
+                }
+
+                var nextDelay = 300L
+
                 try {
-                    val isMonitorEnabled = preferencesDataSource.isAppMonitorActiveFlow.first()
                     val hasUsagePermission = PermissionManager.hasUsageStatsPermission(this@AppMonitorService)
 
-                    if (isMonitorEnabled && hasUsagePermission && usageStatsManager != null) {
-                        val lockedPackages = preferencesDataSource.lockedPackagesFlow.first()
+                    if (cachedIsMonitorEnabled && hasUsagePermission && usageStatsManager != null) {
+                        val locked = cachedLockedPackages
 
-                        if (lockedPackages.isNotEmpty()) {
+                        if (locked.isNotEmpty()) {
                             val foregroundPackage = detectForegroundPackage(usageStatsManager)
 
                             if (foregroundPackage != null &&
                                 foregroundPackage != packageName &&
-                                lockedPackages.contains(foregroundPackage)
+                                locked.contains(foregroundPackage)
                             ) {
                                 val isAlreadyUnlocked = AppLockSession.isPackageUnlocked(foregroundPackage)
                                 val isLockShowing = AppLockSession.isLockActivityShowing
 
                                 if (!isAlreadyUnlocked && !isLockShowing) {
                                     LockActivity.start(this@AppMonitorService, foregroundPackage)
+                                    nextDelay = 150L // Tight polling during intercept
                                 }
+                            }
+
+                            // Adaptive rate: if user stays on the same package, relax delay to 450ms
+                            if (foregroundPackage == lastObservedPackage) {
+                                nextDelay = 450L
+                            } else {
+                                lastObservedPackage = foregroundPackage
+                                nextDelay = 220L
                             }
                         }
                     }
                 } catch (_: Exception) {
                     // Prevent any polling exception from crashing foreground service
                 }
-                delay(350)
+                delay(nextDelay)
             }
         }
     }
 
     private fun detectForegroundPackage(usageStatsManager: UsageStatsManager): String? {
         val now = System.currentTimeMillis()
-        val events = usageStatsManager.queryEvents(now - 8000, now)
+        val events = usageStatsManager.queryEvents(now - 6000, now)
         val event = UsageEvents.Event()
         var lastForeground: String? = null
 
@@ -188,7 +239,8 @@ class AppMonitorService : Service() {
         }
 
         // Secondary fallback
-        val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, now - 10000, now)
+        val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, now - 8000, now)
         return stats?.maxByOrNull { it.lastTimeUsed }?.packageName
     }
 }
+

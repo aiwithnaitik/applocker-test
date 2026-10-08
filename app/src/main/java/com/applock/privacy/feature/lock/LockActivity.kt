@@ -137,28 +137,67 @@ class LockActivity : FragmentActivity() {
                 val isHapticEnabled by preferencesDataSource.isHapticEnabledFlow.collectAsState(initial = true)
                 val lockoutUntil by preferencesDataSource.lockoutUntilTimestampFlow.collectAsState(initial = 0L)
 
-                LockScreenContent(
-                    appName = appName,
-                    appIconBitmap = appIconBitmap,
-                    targetPackage = targetPackage,
-                    theme = activeTheme,
-                    initialLockType = defaultLockType,
-                    hasPatternConfigured = hasPattern,
-                    isPatternVisible = isPatternVisible,
-                    isHapticEnabled = isHapticEnabled,
-                    lockoutUntilTimestamp = lockoutUntil,
-                    preferencesDataSource = preferencesDataSource,
-                    onUnlockSuccess = {
-                        AlarmPlayer.stop()
-                        AppLockSession.unlockPackage(targetPackage)
-                        AppLockSession.isLockActivityShowing = false
-                        finish()
-                    },
-                    activity = this
-                )
+                val disguiseModeStr by preferencesDataSource.disguiseModeFlow.collectAsState(initial = "NONE")
+                val isAppLockOnly by preferencesDataSource.isDisguiseAppLockOnlyFlow.collectAsState(initial = false)
+                var disguiseBypassed by remember { mutableStateOf(false) }
+
+                val disguiseMode = remember(disguiseModeStr) {
+                    com.applock.privacy.feature.disguise.DisguiseMode.fromId(disguiseModeStr)
+                }
+                val shouldShowDisguise = !disguiseBypassed &&
+                    disguiseMode != com.applock.privacy.feature.disguise.DisguiseMode.NONE &&
+                    (!isAppLockOnly || targetPackage == packageName)
+
+                if (shouldShowDisguise) {
+                    when (disguiseMode) {
+                        com.applock.privacy.feature.disguise.DisguiseMode.CRASH_DIALOG -> {
+                            com.applock.privacy.feature.disguise.FakeCrashCover(
+                                appName = appName,
+                                onBypass = { disguiseBypassed = true }
+                            )
+                        }
+                        com.applock.privacy.feature.disguise.DisguiseMode.CALCULATOR -> {
+                            com.applock.privacy.feature.disguise.CalculatorDecoyCover(
+                                onBypass = {
+                                    AlarmPlayer.stop()
+                                    AppLockSession.unlockPackage(targetPackage)
+                                    AppLockSession.isLockActivityShowing = false
+                                    finish()
+                                },
+                                onVerifyPin = { typedPin ->
+                                    SecurityManager.verifyPin(preferencesDataSource, typedPin)
+                                }
+                            )
+                        }
+                        else -> {
+                            disguiseBypassed = true
+                        }
+                    }
+                } else {
+                    LockScreenContent(
+                        appName = appName,
+                        appIconBitmap = appIconBitmap,
+                        targetPackage = targetPackage,
+                        theme = activeTheme,
+                        initialLockType = defaultLockType,
+                        hasPatternConfigured = hasPattern,
+                        isPatternVisible = isPatternVisible,
+                        isHapticEnabled = isHapticEnabled,
+                        lockoutUntilTimestamp = lockoutUntil,
+                        preferencesDataSource = preferencesDataSource,
+                        onUnlockSuccess = {
+                            AlarmPlayer.stop()
+                            AppLockSession.unlockPackage(targetPackage)
+                            AppLockSession.isLockActivityShowing = false
+                            finish()
+                        },
+                        activity = this
+                    )
+                }
             }
         }
     }
+
 
     override fun onDestroy() {
         super.onDestroy()

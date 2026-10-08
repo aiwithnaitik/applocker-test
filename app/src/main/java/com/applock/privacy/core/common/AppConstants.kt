@@ -18,4 +18,7 @@ object AppConstants {
     const val ROUTE_NOTIFICATION_SHIELD = "notification_shield"
     const val ROUTE_WEBSITE_BLOCKER = "website_blocker"
     const val ROUTE_PRIVATE_BROWSER = "private_browser"
+    const val ROUTE_DISGUISE_COVER = "disguise_cover"
+    const val ROUTE_PRO_SUBSCRIPTION = "pro_subscription"
 }
+

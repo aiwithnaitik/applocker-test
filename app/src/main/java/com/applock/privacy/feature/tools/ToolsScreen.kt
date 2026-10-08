@@ -56,6 +56,8 @@ fun ToolsScreen(
     onNavigateToNotificationShield: () -> Unit = {},
     onNavigateToWebsiteBlocker: () -> Unit = {},
     onNavigateToPrivateBrowser: () -> Unit = {},
+    onNavigateToDisguiseCover: () -> Unit = {},
+    onNavigateToProSubscription: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -123,27 +125,30 @@ fun ToolsScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Tool 5: Fake Disguise
+        // Tool 5: Fake Disguise (Phase 21)
         ToolCard(
             title = "Disguise Cover",
             description = "Displays a realistic 'App Has Stopped' crash window or calculator decoy.",
             icon = Icons.Default.VisibilityOff,
             iconTint = BrightAzure,
-            statusText = "PHASE 21",
-            statusColor = BrightAzure
+            statusText = "ACTIVE",
+            statusColor = BrightAzure,
+            onClick = onNavigateToDisguiseCover
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Tool 6: Private Media Vault
+        // Tool 6: Pro VIP Membership (Phase 22)
         ToolCard(
-            title = "Media Vault",
-            description = "Encrypted private vault to hide sensitive photos, videos, and files.",
+            title = "Pro VIP Access",
+            description = "Unlock unlimited custom themes, advanced intruder tools, and priority protection.",
             icon = Icons.Default.FolderSpecial,
             iconTint = ElectricCyan,
-            statusText = "PHASE 22",
-            statusColor = ElectricCyan
+            statusText = "ACTIVE",
+            statusColor = ElectricCyan,
+            onClick = onNavigateToProSubscription
         )
+
 
         Spacer(modifier = Modifier.height(12.dp))
 

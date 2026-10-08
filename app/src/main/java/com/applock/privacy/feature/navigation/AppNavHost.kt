@@ -1,5 +1,10 @@
 package com.applock.privacy.feature.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -13,11 +18,13 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.applock.privacy.core.common.AppConstants
 import com.applock.privacy.data.local.AppPreferencesDataSource
+import com.applock.privacy.feature.disguise.DisguiseCoverScreen
 import com.applock.privacy.feature.home.HomeScreen
 import com.applock.privacy.feature.onboarding.OnboardingCompleteScreen
 import com.applock.privacy.feature.onboarding.OnboardingReasonScreen
 import com.applock.privacy.feature.onboarding.SplashScreen
 import com.applock.privacy.feature.permissions.PermissionScreen
+import com.applock.privacy.feature.pro.ProSubscriptionScreen
 import com.applock.privacy.feature.settings.SettingsScreen
 import com.applock.privacy.feature.themes.ThemesScreen
 import com.applock.privacy.feature.tools.ToolsScreen
@@ -49,7 +56,11 @@ fun AppNavHost() {
         NavHost(
             navController = navController,
             startDestination = AppConstants.ROUTE_SPLASH,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(innerPadding),
+            enterTransition = { fadeIn(tween(250)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(250)) },
+            exitTransition = { fadeOut(tween(250)) + slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(250)) },
+            popEnterTransition = { fadeIn(tween(250)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(250)) },
+            popExitTransition = { fadeOut(tween(250)) + slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(250)) }
         ) {
             // Splash & First-Launch Onboarding Routes
             composable(AppConstants.ROUTE_SPLASH) {
@@ -58,6 +69,7 @@ fun AppNavHost() {
                     onNavigateToHome = {
                         navController.navigate(Screen.Home.route) {
                             popUpTo(AppConstants.ROUTE_SPLASH) { inclusive = true }
+
                         }
                     },
                     onNavigateToOnboarding = {
@@ -133,6 +145,24 @@ fun AppNavHost() {
                 )
             }
 
+            // Disguise Cover Screen (Phase 21)
+            composable(AppConstants.ROUTE_DISGUISE_COVER) {
+                DisguiseCoverScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            // Pro Subscription Screen (Phase 22)
+            composable(AppConstants.ROUTE_PRO_SUBSCRIPTION) {
+                ProSubscriptionScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
             // Main App Shell Routes
             composable(Screen.Home.route) {
                 HomeScreen(
@@ -155,6 +185,12 @@ fun AppNavHost() {
                     },
                     onNavigateToPrivateBrowser = {
                         navController.navigate(AppConstants.ROUTE_PRIVATE_BROWSER)
+                    },
+                    onNavigateToDisguiseCover = {
+                        navController.navigate(AppConstants.ROUTE_DISGUISE_COVER)
+                    },
+                    onNavigateToProSubscription = {
+                        navController.navigate(AppConstants.ROUTE_PRO_SUBSCRIPTION)
                     }
                 )
             }
@@ -177,6 +213,12 @@ fun AppNavHost() {
                     onNavigateToWebsiteBlocker = {
                         navController.navigate(AppConstants.ROUTE_WEBSITE_BLOCKER)
                     },
+                    onNavigateToDisguiseCover = {
+                        navController.navigate(AppConstants.ROUTE_DISGUISE_COVER)
+                    },
+                    onNavigateToProSubscription = {
+                        navController.navigate(AppConstants.ROUTE_PRO_SUBSCRIPTION)
+                    },
                     onResetOnboarding = {
                         navController.navigate(AppConstants.ROUTE_SPLASH) {
                             popUpTo(Screen.Home.route) { inclusive = true }
@@ -187,3 +229,4 @@ fun AppNavHost() {
         }
     }
 }
+
