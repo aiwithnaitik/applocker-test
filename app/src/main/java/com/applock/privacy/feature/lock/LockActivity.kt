@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.fragment.app.FragmentActivity
+import com.applock.privacy.core.alarm.AlarmPlayer
 import com.applock.privacy.core.monitoring.AppLockSession
 import com.applock.privacy.core.security.AuthResult
 import com.applock.privacy.core.security.BiometricHelper
@@ -148,6 +149,7 @@ class LockActivity : FragmentActivity() {
                     lockoutUntilTimestamp = lockoutUntil,
                     preferencesDataSource = preferencesDataSource,
                     onUnlockSuccess = {
+                        AlarmPlayer.stop()
                         AppLockSession.unlockPackage(targetPackage)
                         AppLockSession.isLockActivityShowing = false
                         finish()
@@ -160,6 +162,7 @@ class LockActivity : FragmentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        AlarmPlayer.stop()
         AppLockSession.isLockActivityShowing = false
     }
 }
@@ -307,6 +310,32 @@ private fun LockScreenContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            val isAlarmActive by AlarmPlayer.isAlarmActive.collectAsState()
+            if (isAlarmActive) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(PillShape)
+                        .background(Color(0xFFFF1744).copy(alpha = 0.25f))
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LockClock,
+                        contentDescription = null,
+                        tint = Color(0xFFFF1744),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Alarm Sounding — Unlock to Silence",
+                        color = Color(0xFFFF1744),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+
             // Lockout banner or Error status
             if (isLockedOut) {
                 Row(
@@ -371,6 +400,14 @@ private fun LockScreenContent(
                                         IntruderCaptureManager.captureSilently(activity, targetPackage, appName, result.failedCount)
                                     }
 
+                                    // Intruder alarm check
+                                    val isAlarmEnabled = preferencesDataSource.isAlarmEnabledFlow.first()
+                                    val alarmThreshold = preferencesDataSource.alarmThresholdFlow.first()
+                                    val alarmDuration = preferencesDataSource.alarmDurationFlow.first()
+                                    if (isAlarmEnabled && result.failedCount >= alarmThreshold) {
+                                        AlarmPlayer.play(activity, alarmDuration)
+                                    }
+
                                     delay(650)
                                     isError = false
                                     if (!result.isNowLockedOut) errorMessage = null
@@ -421,6 +458,14 @@ private fun LockScreenContent(
                                             val threshold = preferencesDataSource.intruderThresholdFlow.first()
                                             if (isIntruderEnabled && result.failedCount >= threshold) {
                                                 IntruderCaptureManager.captureSilently(activity, targetPackage, appName, result.failedCount)
+                                            }
+
+                                            // Intruder alarm check
+                                            val isAlarmEnabled = preferencesDataSource.isAlarmEnabledFlow.first()
+                                            val alarmThreshold = preferencesDataSource.alarmThresholdFlow.first()
+                                            val alarmDuration = preferencesDataSource.alarmDurationFlow.first()
+                                            if (isAlarmEnabled && result.failedCount >= alarmThreshold) {
+                                                AlarmPlayer.play(activity, alarmDuration)
                                             }
 
                                             delay(650)

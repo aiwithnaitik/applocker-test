@@ -160,4 +160,56 @@ object PermissionManager {
             context.startActivity(intent)
         } catch (_: Exception) {}
     }
+
+    /**
+     * Checks if Notification Listener Service access is granted.
+     */
+    fun isNotificationListenerGranted(context: Context): Boolean {
+        return try {
+            androidx.core.app.NotificationManagerCompat.getEnabledListenerPackages(context)
+                .contains(context.packageName)
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Opens Android Notification Listener access settings.
+     */
+    fun openNotificationListenerSettings(context: Context) {
+        val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        try {
+            context.startActivity(intent)
+        } catch (_: Exception) {}
+    }
+
+    /**
+     * Checks if Website Blocker Accessibility Service is currently enabled.
+     */
+    fun isAccessibilityServiceEnabled(context: Context): Boolean {
+        return try {
+            val enabledServices = Settings.Secure.getString(
+                context.contentResolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ) ?: ""
+            val expectedServiceName = "${context.packageName}/com.applock.privacy.feature.blocker.WebsiteBlockerAccessibilityService"
+            enabledServices.contains(expectedServiceName) || enabledServices.contains(context.packageName)
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Opens Android Accessibility settings.
+     */
+    fun openAccessibilitySettings(context: Context) {
+        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        try {
+            context.startActivity(intent)
+        } catch (_: Exception) {}
+    }
 }

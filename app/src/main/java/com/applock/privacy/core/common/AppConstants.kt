@@ -15,4 +15,7 @@ object AppConstants {
     const val ROUTE_SETTINGS = "settings"
     const val ROUTE_PERMISSIONS = "permissions"
     const val ROUTE_INTRUDER_LOGS = "intruder_logs"
+    const val ROUTE_NOTIFICATION_SHIELD = "notification_shield"
+    const val ROUTE_WEBSITE_BLOCKER = "website_blocker"
+    const val ROUTE_PRIVATE_BROWSER = "private_browser"
 }

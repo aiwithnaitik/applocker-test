@@ -106,6 +106,33 @@ fun AppNavHost() {
                 )
             }
 
+            // Notification Shield Screen (Phase 18)
+            composable(AppConstants.ROUTE_NOTIFICATION_SHIELD) {
+                com.applock.privacy.feature.notification.NotificationShieldScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            // Website Blocker Screen (Phase 19)
+            composable(AppConstants.ROUTE_WEBSITE_BLOCKER) {
+                com.applock.privacy.feature.blocker.WebsiteBlockerScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            // Private Browser Screen (Phase 20)
+            composable(AppConstants.ROUTE_PRIVATE_BROWSER) {
+                com.applock.privacy.feature.browser.PrivateBrowserScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
             // Main App Shell Routes
             composable(Screen.Home.route) {
                 HomeScreen(
@@ -119,6 +146,15 @@ fun AppNavHost() {
                 ToolsScreen(
                     onNavigateToIntruderLogs = {
                         navController.navigate(AppConstants.ROUTE_INTRUDER_LOGS)
+                    },
+                    onNavigateToNotificationShield = {
+                        navController.navigate(AppConstants.ROUTE_NOTIFICATION_SHIELD)
+                    },
+                    onNavigateToWebsiteBlocker = {
+                        navController.navigate(AppConstants.ROUTE_WEBSITE_BLOCKER)
+                    },
+                    onNavigateToPrivateBrowser = {
+                        navController.navigate(AppConstants.ROUTE_PRIVATE_BROWSER)
                     }
                 )
             }
@@ -134,6 +170,12 @@ fun AppNavHost() {
                     },
                     onNavigateToIntruderLogs = {
                         navController.navigate(AppConstants.ROUTE_INTRUDER_LOGS)
+                    },
+                    onNavigateToNotificationShield = {
+                        navController.navigate(AppConstants.ROUTE_NOTIFICATION_SHIELD)
+                    },
+                    onNavigateToWebsiteBlocker = {
+                        navController.navigate(AppConstants.ROUTE_WEBSITE_BLOCKER)
                     },
                     onResetOnboarding = {
                         navController.navigate(AppConstants.ROUTE_SPLASH) {

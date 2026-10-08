@@ -39,6 +39,11 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.VolumeOff
+import com.applock.privacy.core.alarm.AlarmPlayer
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -88,6 +93,8 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     onNavigateToPermissions: () -> Unit = {},
     onNavigateToIntruderLogs: () -> Unit = {},
+    onNavigateToNotificationShield: () -> Unit = {},
+    onNavigateToWebsiteBlocker: () -> Unit = {},
     onResetOnboarding: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -114,6 +121,16 @@ fun SettingsScreen(
     val isIntruderEnabled by preferencesDataSource.isIntruderDetectionEnabledFlow.collectAsState(initial = false)
     val intruderThreshold by preferencesDataSource.intruderThresholdFlow.collectAsState(initial = 3)
     val intruderLogs by preferencesDataSource.intruderLogsFlow.collectAsState(initial = emptyList())
+
+    // Phase 17: Intruder Alarm
+    val isAlarmEnabled by preferencesDataSource.isAlarmEnabledFlow.collectAsState(initial = false)
+    val alarmThreshold by preferencesDataSource.alarmThresholdFlow.collectAsState(initial = 3)
+    val alarmDuration by preferencesDataSource.alarmDurationFlow.collectAsState(initial = 30)
+    val isAlarmPlaying by AlarmPlayer.isAlarmActive.collectAsState()
+
+    // Phase 18 & 19
+    val isNotificationShieldEnabled by preferencesDataSource.isNotificationShieldEnabledFlow.collectAsState(initial = false)
+    val isWebsiteBlockerEnabled by preferencesDataSource.isWebsiteBlockerEnabledFlow.collectAsState(initial = true)
 
     var showPinDialog by remember { mutableStateOf(false) }
     var showPatternDialog by remember { mutableStateOf(false) }
@@ -467,6 +484,179 @@ fun SettingsScreen(
                 subtitle = if (intruderLogs.isNotEmpty()) "${intruderLogs.size} incident(s) captured" else "No security incidents logged",
                 icon = Icons.Default.Security,
                 onClick = onNavigateToIntruderLogs
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Phase 17: Intruder Alarm
+        Text(
+            text = "Intruder Siren Alarm",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        AppGlassCard(modifier = Modifier.fillMaxWidth()) {
+            SettingToggleItem(
+                title = "Sound Intruder Alarm",
+                subtitle = "Sound loud siren when consecutive wrong attempts occur",
+                icon = Icons.Default.NotificationsActive,
+                checked = isAlarmEnabled,
+                onCheckedChange = { enabled ->
+                    coroutineScope.launch {
+                        preferencesDataSource.setAlarmEnabled(enabled)
+                    }
+                }
+            )
+
+            if (isAlarmEnabled) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Divider(color = BorderSubtle.copy(alpha = 0.5f))
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            coroutineScope.launch {
+                                val next = when (alarmThreshold) {
+                                    2 -> 3
+                                    3 -> 5
+                                    else -> 2
+                                }
+                                preferencesDataSource.setAlarmThreshold(next)
+                            }
+                        }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = "Alarm Trigger Threshold",
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary,
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            text = "Trigger siren after $alarmThreshold failed unlock(s)",
+                            color = TextMuted,
+                            fontSize = 12.sp
+                        )
+                    }
+                    AppStatusBadge(text = "$alarmThreshold Attempt(s)", isPositive = true)
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                Divider(color = BorderSubtle.copy(alpha = 0.5f))
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            coroutineScope.launch {
+                                val next = when (alarmDuration) {
+                                    15 -> 30
+                                    30 -> 60
+                                    else -> 15
+                                }
+                                preferencesDataSource.setAlarmDuration(next)
+                            }
+                        }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = "Alarm Max Duration",
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary,
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            text = "Siren stops on legitimate unlock or after $alarmDuration seconds",
+                            color = TextMuted,
+                            fontSize = 12.sp
+                        )
+                    }
+                    AppStatusBadge(text = "${alarmDuration}s", isPositive = true)
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                Divider(color = BorderSubtle.copy(alpha = 0.5f))
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            if (isAlarmPlaying) {
+                                AlarmPlayer.stop()
+                            } else {
+                                AlarmPlayer.play(context, alarmDuration)
+                            }
+                        }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = if (isAlarmPlaying) "Stop Siren Preview" else "Test Alarm Sound",
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isAlarmPlaying) RoseDestructive else TextPrimary,
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            text = if (isAlarmPlaying) "Tap to silence alarm immediately" else "Preview the alarm sound that plays on intrusion",
+                            color = TextMuted,
+                            fontSize = 12.sp
+                        )
+                    }
+                    Icon(
+                        imageVector = if (isAlarmPlaying) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                        contentDescription = null,
+                        tint = if (isAlarmPlaying) RoseDestructive else ElectricCyan,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Phase 18 & 19: Privacy & Content Shield Section
+        Text(
+            text = "Privacy & Content Shield",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        AppGlassCard(modifier = Modifier.fillMaxWidth()) {
+            SettingNavigationItem(
+                title = "Notification Shield",
+                subtitle = if (isNotificationShieldEnabled) "Enabled • Conceals sensitive notifications" else "Disabled",
+                icon = Icons.Default.NotificationsActive,
+                onClick = onNavigateToNotificationShield
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+            Divider(color = BorderSubtle.copy(alpha = 0.5f))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            SettingNavigationItem(
+                title = "Website Blocker",
+                subtitle = if (isWebsiteBlockerEnabled) "Active • Browser domain interceptor" else "Disabled",
+                icon = Icons.Default.Public,
+                onClick = onNavigateToWebsiteBlocker
             )
         }
 

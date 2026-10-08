@@ -82,6 +82,38 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- Dedicated Lock Screen Activity for Blocked Websites -->
+        <activity
+            android:name=".feature.blocker.BlockedSiteActivity"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.AppLock"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- Notification Privacy Shield Service (Phase 18) -->
+        <service
+            android:name=".core.notification.AppNotificationListenerService"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <!-- Website Blocker Accessibility Service (Phase 19) -->
+        <service
+            android:name=".feature.blocker.WebsiteBlockerAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
     </application>
 
 </manifest>

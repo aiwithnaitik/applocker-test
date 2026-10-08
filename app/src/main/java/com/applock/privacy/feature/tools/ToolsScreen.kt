@@ -47,9 +47,15 @@ import com.applock.privacy.core.ui.theme.TextMuted
 import com.applock.privacy.core.ui.theme.TextPrimary
 import com.applock.privacy.core.ui.theme.TextSecondary
 
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Explore
+
 @Composable
 fun ToolsScreen(
     onNavigateToIntruderLogs: () -> Unit = {},
+    onNavigateToNotificationShield: () -> Unit = {},
+    onNavigateToWebsiteBlocker: () -> Unit = {},
+    onNavigateToPrivateBrowser: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -65,7 +71,7 @@ fun ToolsScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Tool 1: Intruder Selfie (Active in Phase 16)
+        // Tool 1: Intruder Selfie (Phase 16)
         ToolCard(
             title = "Intruder Selfie & History",
             description = "Silently snaps a photo of unauthorized intruders on failed unlocks. Tap to view captured logs.",
@@ -78,19 +84,46 @@ fun ToolsScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Tool 2: Notification Shield
+        // Tool 2: Notification Shield (Phase 18)
         ToolCard(
             title = "Notification Shield",
-            description = "Conceals incoming messages and content previews from the lock screen.",
+            description = "Conceals incoming messages and sensitive previews from locked applications.",
             icon = Icons.Default.NotificationsActive,
             iconTint = AmberWarning,
-            statusText = "PHASE 18",
-            statusColor = AmberWarning
+            statusText = "ACTIVE",
+            statusColor = AmberWarning,
+            onClick = onNavigateToNotificationShield
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Tool 3: Fake Disguise
+        // Tool 3: Website Blocker (Phase 19)
+        ToolCard(
+            title = "Website Blocker",
+            description = "Enforces focus and safety by intercepting distracting domains across mobile browsers.",
+            icon = Icons.Default.Language,
+            iconTint = ElectricCyan,
+            statusText = "ACTIVE",
+            statusColor = ElectricCyan,
+            onClick = onNavigateToWebsiteBlocker
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Tool 4: Private Browser (Phase 20)
+        ToolCard(
+            title = "Private Browser",
+            description = "Zero-trace incognito browsing. Cookies, history, and cache are destroyed on exit.",
+            icon = Icons.Default.Explore,
+            iconTint = BrightAzure,
+            statusText = "ACTIVE",
+            statusColor = BrightAzure,
+            onClick = onNavigateToPrivateBrowser
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Tool 5: Fake Disguise
         ToolCard(
             title = "Disguise Cover",
             description = "Displays a realistic 'App Has Stopped' crash window or calculator decoy.",
@@ -102,7 +135,7 @@ fun ToolsScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Tool 4: Private Media Vault
+        // Tool 6: Private Media Vault
         ToolCard(
             title = "Media Vault",
             description = "Encrypted private vault to hide sensitive photos, videos, and files.",
@@ -114,7 +147,7 @@ fun ToolsScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Tool 5: Uninstall Protection
+        // Tool 7: Uninstall Protection
         ToolCard(
             title = "Uninstall Protection",
             description = "Prevents unauthorized users from uninstalling AppLock to bypass security.",

@@ -55,6 +55,18 @@ class AppPreferencesDataSource(private val context: Context) {
         val KEY_INTRUDER_DETECTION_ENABLED = booleanPreferencesKey("intruder_detection_enabled")
         val KEY_INTRUDER_THRESHOLD = intPreferencesKey("intruder_threshold")
         val KEY_INTRUDER_LOGS_JSON = stringPreferencesKey("intruder_logs_json")
+
+        // Phase 17: Intruder Alarm
+        val KEY_ALARM_ENABLED = booleanPreferencesKey("alarm_enabled")
+        val KEY_ALARM_THRESHOLD = intPreferencesKey("alarm_threshold")
+        val KEY_ALARM_DURATION = intPreferencesKey("alarm_duration")
+
+        // Phase 18: Notification Security
+        val KEY_NOTIFICATION_SHIELD_ENABLED = booleanPreferencesKey("notification_shield_enabled")
+
+        // Phase 19: Website Blocker
+        val KEY_WEBSITE_BLOCKER_ENABLED = booleanPreferencesKey("website_blocker_enabled")
+        val KEY_BLOCKED_WEBSITES_JSON = stringPreferencesKey("blocked_websites_json")
     }
 
     val lockedPackagesFlow: Flow<Set<String>> = context.dataStore.data.map { preferences ->
@@ -144,6 +156,33 @@ class AppPreferencesDataSource(private val context: Context) {
 
     val intruderLogsFlow: Flow<List<IntruderLog>> = context.dataStore.data.map { preferences ->
         IntruderLog.parseLogsJson(preferences[KEY_INTRUDER_LOGS_JSON])
+    }
+
+    // Phase 17: Intruder Alarm
+    val isAlarmEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[KEY_ALARM_ENABLED] ?: false
+    }
+
+    val alarmThresholdFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[KEY_ALARM_THRESHOLD] ?: 3
+    }
+
+    val alarmDurationFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[KEY_ALARM_DURATION] ?: 30
+    }
+
+    // Phase 18: Notification Security
+    val isNotificationShieldEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[KEY_NOTIFICATION_SHIELD_ENABLED] ?: false
+    }
+
+    // Phase 19: Website Blocker
+    val isWebsiteBlockerEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[KEY_WEBSITE_BLOCKER_ENABLED] ?: true
+    }
+
+    val blockedWebsitesFlow: Flow<List<com.applock.privacy.feature.blocker.BlockedWebsite>> = context.dataStore.data.map { preferences ->
+        com.applock.privacy.feature.blocker.BlockedWebsite.parseWebsitesJson(preferences[KEY_BLOCKED_WEBSITES_JSON])
     }
 
     // Mutators
@@ -372,6 +411,69 @@ class AppPreferencesDataSource(private val context: Context) {
     suspend fun clearIntruderLogs() {
         context.dataStore.edit { preferences ->
             preferences.remove(KEY_INTRUDER_LOGS_JSON)
+        }
+    }
+
+    // Phase 17: Intruder Alarm Mutators
+    suspend fun setAlarmEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_ALARM_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setAlarmThreshold(threshold: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_ALARM_THRESHOLD] = threshold
+        }
+    }
+
+    suspend fun setAlarmDuration(durationSeconds: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_ALARM_DURATION] = durationSeconds
+        }
+    }
+
+    // Phase 18: Notification Security Mutators
+    suspend fun setNotificationShieldEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_NOTIFICATION_SHIELD_ENABLED] = enabled
+        }
+    }
+
+    // Phase 19: Website Blocker Mutators
+    suspend fun setWebsiteBlockerEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_WEBSITE_BLOCKER_ENABLED] = enabled
+        }
+    }
+
+    suspend fun addBlockedWebsite(website: com.applock.privacy.feature.blocker.BlockedWebsite) {
+        context.dataStore.edit { preferences ->
+            val list = com.applock.privacy.feature.blocker.BlockedWebsite.parseWebsitesJson(preferences[KEY_BLOCKED_WEBSITES_JSON]).toMutableList()
+            // Check if domain already exists
+            val existingIndex = list.indexOfFirst { it.domain.equals(website.domain, ignoreCase = true) }
+            if (existingIndex >= 0) {
+                list[existingIndex] = website
+            } else {
+                list.add(0, website)
+            }
+            preferences[KEY_BLOCKED_WEBSITES_JSON] = com.applock.privacy.feature.blocker.BlockedWebsite.serializeWebsites(list)
+        }
+    }
+
+    suspend fun toggleBlockedWebsite(id: String, isEnabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            val list = com.applock.privacy.feature.blocker.BlockedWebsite.parseWebsitesJson(preferences[KEY_BLOCKED_WEBSITES_JSON]).map {
+                if (it.id == id) it.copy(isEnabled = isEnabled) else it
+            }
+            preferences[KEY_BLOCKED_WEBSITES_JSON] = com.applock.privacy.feature.blocker.BlockedWebsite.serializeWebsites(list)
+        }
+    }
+
+    suspend fun deleteBlockedWebsite(id: String) {
+        context.dataStore.edit { preferences ->
+            val list = com.applock.privacy.feature.blocker.BlockedWebsite.parseWebsitesJson(preferences[KEY_BLOCKED_WEBSITES_JSON]).filterNot { it.id == id }
+            preferences[KEY_BLOCKED_WEBSITES_JSON] = com.applock.privacy.feature.blocker.BlockedWebsite.serializeWebsites(list)
         }
     }
 }
