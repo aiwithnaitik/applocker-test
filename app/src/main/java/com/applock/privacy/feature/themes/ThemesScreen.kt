@@ -20,80 +20,57 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.applock.privacy.core.theme.AppTheme
+import com.applock.privacy.core.theme.AppThemeCatalog
 import com.applock.privacy.core.ui.components.AppGlassCard
-import com.applock.privacy.core.ui.components.AppOutlinedButton
+import com.applock.privacy.core.ui.components.AppGradientButton
 import com.applock.privacy.core.ui.components.AppStatusBadge
 import com.applock.privacy.core.ui.components.AppTopBar
 import com.applock.privacy.core.ui.theme.BackgroundDeep
 import com.applock.privacy.core.ui.theme.BorderSubtle
-import com.applock.privacy.core.ui.theme.ElectricCyan
 import com.applock.privacy.core.ui.theme.EmeraldSecure
+import com.applock.privacy.core.ui.theme.PillShape
 import com.applock.privacy.core.ui.theme.TextMuted
 import com.applock.privacy.core.ui.theme.TextPrimary
 import com.applock.privacy.core.ui.theme.TextSecondary
-
-data class LockThemeItem(
-    val id: String,
-    val name: String,
-    val description: String,
-    val previewGradient: Brush,
-    val accentColor: Color
-)
+import com.applock.privacy.data.local.AppPreferencesDataSource
+import kotlinx.coroutines.launch
 
 @Composable
 fun ThemesScreen(
     modifier: Modifier = Modifier
 ) {
-    var selectedThemeId by remember { mutableStateOf("sapphire_glass") }
-    val scrollState = rememberScrollState()
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val preferencesDataSource = remember { AppPreferencesDataSource(context) }
+    val persistedThemeId by preferencesDataSource.selectedThemeIdFlow.collectAsState(initial = "sapphire_glass")
 
-    val themes = listOf(
-        LockThemeItem(
-            id = "sapphire_glass",
-            name = "Sapphire Glass (Default)",
-            description = "Translucent glowing cyan & sapphire inspired by official AppLock icon.",
-            previewGradient = Brush.verticalGradient(listOf(Color(0xFF0084FF), Color(0xFF030714))),
-            accentColor = ElectricCyan
-        ),
-        LockThemeItem(
-            id = "cyber_neon",
-            name = "Cyber Neon",
-            description = "Electric ultraviolet and magenta neon aesthetics.",
-            previewGradient = Brush.verticalGradient(listOf(Color(0xFFC026D3), Color(0xFF1E1B4B))),
-            accentColor = Color(0xFFF43F5E)
-        ),
-        LockThemeItem(
-            id = "emerald_matrix",
-            name = "Emerald Matrix",
-            description = "Deep cyber emerald green terminal look.",
-            previewGradient = Brush.verticalGradient(listOf(Color(0xFF059669), Color(0xFF022C22))),
-            accentColor = EmeraldSecure
-        ),
-        LockThemeItem(
-            id = "obsidian_dark",
-            name = "Obsidian Stealth",
-            description = "Pure pitch black with subtle smoked silver buttons.",
-            previewGradient = Brush.verticalGradient(listOf(Color(0xFF334155), Color(0xFF020617))),
-            accentColor = Color(0xFF94A3B8)
-        )
-    )
+    var previewThemeId by remember { mutableStateOf(persistedThemeId) }
+    val previewTheme = remember(previewThemeId, persistedThemeId) {
+        AppThemeCatalog.getThemeById(if (previewThemeId.isNotEmpty()) previewThemeId else persistedThemeId)
+    }
+
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = modifier
@@ -104,29 +81,55 @@ fun ThemesScreen(
     ) {
         AppTopBar(title = "Lock Themes")
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
+        // Live Interactive Theme Preview Card
         Text(
-            text = "Select Lock Screen Theme",
+            text = "Live Lock Screen Preview",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = TextPrimary
         )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        LiveThemePreviewCard(theme = previewTheme)
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Themes Catalog
         Text(
-            text = "Personalize your PIN & pattern keypad appearance.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextMuted
+            text = "Standard Themes",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
-        themes.forEach { theme ->
-            val isSelected = selectedThemeId == theme.id
+        Text(
+            text = "All basic themes are 100% free. Choose a theme to customize the lock screen.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextMuted,
+            fontSize = 12.sp
+        )
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        AppThemeCatalog.allThemes.forEach { theme ->
+            val isPersisted = persistedThemeId == theme.id
+            val isPreviewing = previewThemeId == theme.id
 
             AppGlassCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { selectedThemeId = theme.id }
+                    .clickable {
+                        previewThemeId = theme.id
+                        coroutineScope.launch {
+                            preferencesDataSource.setSelectedTheme(theme.id)
+                        }
+                    },
+                borderColor = if (isPersisted) theme.accentColor else if (isPreviewing) theme.accentColor.copy(alpha = 0.5f) else null
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -137,12 +140,13 @@ fun ThemesScreen(
                         modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // Theme Swatch Box
                         Box(
                             modifier = Modifier
                                 .size(50.dp)
                                 .clip(RoundedCornerShape(14.dp))
-                                .background(theme.previewGradient)
-                                .border(1.dp, theme.accentColor.copy(alpha = 0.5f), RoundedCornerShape(14.dp)),
+                                .background(theme.backgroundBrush)
+                                .border(1.5.dp, theme.accentColor, RoundedCornerShape(14.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -156,12 +160,22 @@ fun ThemesScreen(
                         Spacer(modifier = Modifier.width(14.dp))
 
                         Column {
-                            Text(
-                                text = theme.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = theme.name,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                                if (isPersisted) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    AppStatusBadge(
+                                        text = "APPLIED",
+                                        color = EmeraldSecure,
+                                        showDot = true
+                                    )
+                                }
+                            }
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = theme.description,
@@ -173,11 +187,11 @@ fun ThemesScreen(
                         }
                     }
 
-                    if (isSelected) {
+                    if (isPersisted) {
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Selected",
-                            tint = ElectricCyan,
+                            contentDescription = "Active",
+                            tint = theme.accentColor,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -187,30 +201,86 @@ fun ThemesScreen(
             Spacer(modifier = Modifier.height(10.dp))
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(80.dp))
+    }
+}
 
-        // Custom Wallpaper Teaser
-        AppGlassCard(modifier = Modifier.fillMaxWidth()) {
+@Composable
+private fun LiveThemePreviewCard(theme: AppTheme) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(theme.backgroundBrush)
+            .border(1.5.dp, theme.accentColor.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(theme.accentColor.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = null,
+                    tint = theme.accentColor,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             Text(
-                text = "Custom Background Wallpaper",
+                text = "${theme.name} Preview",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = theme.textColor
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Set a custom photo or live blur effect from your phone gallery.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextMuted
-            )
-            Spacer(modifier = Modifier.height(14.dp))
-            AppOutlinedButton(
-                text = "Upload Wallpaper (Phase 11)",
-                onClick = {},
-                enabled = false
-            )
-        }
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Mini PIN dots preview
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                for (i in 0 until 4) {
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .clip(CircleShape)
+                            .background(if (i < 2) theme.accentColor else Color.Transparent)
+                            .border(1.dp, theme.accentColor, CircleShape)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Mini keypad sample buttons
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                listOf("1", "2", "3").forEach { num ->
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(theme.keyColor),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = num,
+                            color = theme.textColor,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
     }
 }

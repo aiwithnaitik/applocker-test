@@ -79,8 +79,11 @@ fun SettingsScreen(
     val preferencesDataSource = remember { AppPreferencesDataSource(context) }
     val isBiometricsEnabled by preferencesDataSource.isBiometricEnabledFlow.collectAsState(initial = true)
     val hasPinConfigured by preferencesDataSource.hasPinConfiguredFlow.collectAsState(initial = false)
+    val hasPatternConfigured by preferencesDataSource.hasPatternConfiguredFlow.collectAsState(initial = false)
+    val lockType by preferencesDataSource.lockTypeFlow.collectAsState(initial = "pin")
     var isHapticEnabled by remember { mutableStateOf(true) }
     var showPinDialog by remember { mutableStateOf(false) }
+    var showPatternDialog by remember { mutableStateOf(false) }
     var permissionStatus by remember { mutableStateOf(PermissionManager.getPermissionStatus(context)) }
     val scrollState = rememberScrollState()
 
@@ -101,6 +104,14 @@ fun SettingsScreen(
             preferencesDataSource = preferencesDataSource,
             onDismissRequest = { showPinDialog = false },
             onPinCreated = { showPinDialog = false }
+        )
+    }
+
+    if (showPatternDialog) {
+        com.applock.privacy.feature.auth.PatternSetupDialog(
+            preferencesDataSource = preferencesDataSource,
+            onDismissRequest = { showPatternDialog = false },
+            onPatternCreated = { showPatternDialog = false }
         )
     }
 
@@ -146,6 +157,31 @@ fun SettingsScreen(
                 icon = Icons.Default.Lock,
                 onClick = { showPinDialog = true }
             )
+
+            Divider()
+
+            SettingNavigationItem(
+                title = if (hasPatternConfigured) "Change Unlock Pattern" else "Set Up Unlock Pattern",
+                subtitle = if (hasPatternConfigured) "Update your 3x3 security pattern" else "Create an unlock pattern to protect apps",
+                icon = Icons.Default.Lock,
+                onClick = { showPatternDialog = true }
+            )
+
+            if (hasPatternConfigured && hasPinConfigured) {
+                Divider()
+
+                SettingToggleItem(
+                    title = "Primary Method: Pattern",
+                    subtitle = if (lockType == "pattern") "Pattern lock shows by default" else "PIN keypad shows by default",
+                    icon = Icons.Default.Lock,
+                    checked = lockType == "pattern",
+                    onCheckedChange = { isPattern ->
+                        coroutineScope.launch {
+                            preferencesDataSource.setLockType(if (isPattern) "pattern" else "pin")
+                        }
+                    }
+                )
+            }
 
             Divider()
 

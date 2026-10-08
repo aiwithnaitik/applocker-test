@@ -14,7 +14,7 @@ private val Context.dataStore by preferencesDataStore(name = "applock_user_setti
 
 /**
  * DataStore implementation for persisting user preferences, locked package lists,
- * security PIN hashes, and background monitor states.
+ * security credentials (PIN & Pattern), and themes.
  */
 class AppPreferencesDataSource(private val context: Context) {
 
@@ -25,6 +25,10 @@ class AppPreferencesDataSource(private val context: Context) {
         val KEY_ONBOARDING_REASON = stringPreferencesKey("onboarding_reason")
         val KEY_PIN_HASH = stringPreferencesKey("pin_hash")
         val KEY_PIN_SALT = stringPreferencesKey("pin_salt")
+        val KEY_PATTERN_HASH = stringPreferencesKey("pattern_hash")
+        val KEY_PATTERN_SALT = stringPreferencesKey("pattern_salt")
+        val KEY_LOCK_TYPE = stringPreferencesKey("lock_type") // "pin" or "pattern"
+        val KEY_SELECTED_THEME_ID = stringPreferencesKey("selected_theme_id")
         val KEY_APP_MONITOR_ACTIVE = booleanPreferencesKey("app_monitor_active")
     }
 
@@ -42,6 +46,18 @@ class AppPreferencesDataSource(private val context: Context) {
 
     val hasPinConfiguredFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         !preferences[KEY_PIN_HASH].isNullOrEmpty()
+    }
+
+    val hasPatternConfiguredFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        !preferences[KEY_PATTERN_HASH].isNullOrEmpty()
+    }
+
+    val lockTypeFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[KEY_LOCK_TYPE] ?: "pin"
+    }
+
+    val selectedThemeIdFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[KEY_SELECTED_THEME_ID] ?: "sapphire_glass"
     }
 
     val isBiometricEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
@@ -85,6 +101,42 @@ class AppPreferencesDataSource(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences.remove(KEY_PIN_HASH)
             preferences.remove(KEY_PIN_SALT)
+        }
+    }
+
+    suspend fun savePattern(hash: String, salt: String) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_PATTERN_HASH] = hash
+            preferences[KEY_PATTERN_SALT] = salt
+        }
+    }
+
+    suspend fun getPatternHash(): String? {
+        val prefs = context.dataStore.data.first()
+        return prefs[KEY_PATTERN_HASH]
+    }
+
+    suspend fun getPatternSalt(): String? {
+        val prefs = context.dataStore.data.first()
+        return prefs[KEY_PATTERN_SALT]
+    }
+
+    suspend fun clearPattern() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(KEY_PATTERN_HASH)
+            preferences.remove(KEY_PATTERN_SALT)
+        }
+    }
+
+    suspend fun setLockType(lockType: String) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_LOCK_TYPE] = lockType
+        }
+    }
+
+    suspend fun setSelectedTheme(themeId: String) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_SELECTED_THEME_ID] = themeId
         }
     }
 
