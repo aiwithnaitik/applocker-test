@@ -12,6 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,6 +36,7 @@ fun AppTopBar(
     title: String,
     modifier: Modifier = Modifier,
     showLogo: Boolean = true,
+    onNavigateBack: (() -> Unit)? = null,
     actions: @Composable () -> Unit = {}
 ) {
     Row(
@@ -42,7 +47,16 @@ fun AppTopBar(
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (showLogo) {
+        if (onNavigateBack != null) {
+            IconButton(onClick = onNavigateBack) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Back",
+                    tint = TextPrimary
+                )
+            }
+            Spacer(modifier = Modifier.width(4.dp))
+        } else if (showLogo) {
             Box(
                 modifier = Modifier
                     .size(36.dp)

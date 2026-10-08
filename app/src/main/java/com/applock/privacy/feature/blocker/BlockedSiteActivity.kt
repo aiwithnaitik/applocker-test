@@ -52,7 +52,6 @@ import com.applock.privacy.core.security.BiometricHelper
 import com.applock.privacy.core.security.SecurityManager
 import com.applock.privacy.core.ui.components.AppGlassCard
 import com.applock.privacy.core.ui.components.AppStatusBadge
-import com.applock.privacy.core.ui.components.PinKeypad
 import com.applock.privacy.core.ui.theme.AppLockTheme
 import com.applock.privacy.core.ui.theme.BackgroundDeep
 import com.applock.privacy.core.ui.theme.ElectricCyan
@@ -63,7 +62,8 @@ import com.applock.privacy.core.ui.theme.TextMuted
 import com.applock.privacy.core.ui.theme.TextPrimary
 import com.applock.privacy.core.ui.theme.TextSecondary
 import com.applock.privacy.data.local.AppPreferencesDataSource
-import com.applock.privacy.feature.lock.PinDotsIndicator
+import com.applock.privacy.feature.auth.PinDotsIndicator
+import com.applock.privacy.feature.auth.PinKeypad
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -217,7 +217,8 @@ private fun BlockedSiteScreen(
                 Spacer(modifier = Modifier.height(18.dp))
 
                 PinKeypad(
-                    onNumberClick = { digit ->
+                    onNumberClick = { digitInt ->
+                        val digit = digitInt.toString()
                         if (enteredPin.length < 4) {
                             val newPin = enteredPin + digit
                             enteredPin = newPin

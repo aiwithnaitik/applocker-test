@@ -81,6 +81,7 @@ import com.applock.privacy.core.ui.theme.BorderSubtle
 import com.applock.privacy.core.ui.theme.ElectricCyan
 import com.applock.privacy.core.ui.theme.EmeraldSecure
 import com.applock.privacy.core.ui.theme.PillShape
+import com.applock.privacy.core.ui.theme.RoseDestructive
 import com.applock.privacy.core.ui.theme.SurfaceCard
 import com.applock.privacy.core.ui.theme.TextMuted
 import com.applock.privacy.core.ui.theme.TextPrimary
