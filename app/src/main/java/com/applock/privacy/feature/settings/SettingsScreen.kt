@@ -293,8 +293,8 @@ fun SettingsScreen(
                 icon = androidx.compose.material.icons.Icons.Default.SystemUpdate,
                 onClick = {
                     coroutineScope.launch {
-                        val info = updateManager.checkForUpdates()
-                        if (info != null && info.hasUpdate) {
+                        val info = updateManager.checkForUpdates(force = true)
+                        if (info != null) {
                             updateManager.downloadAndInstall(info)
                         }
                     }

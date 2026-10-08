@@ -47,9 +47,10 @@ class AppUpdateManager(private val context: Context) {
         private const val GITHUB_REPO = "aiwithnaitik/applocker-test"
         private const val API_URL = "https://api.github.com/repos/$GITHUB_REPO/releases/tags/latest"
         private const val KEY_LAST_KNOWN_RELEASE_DATE = "last_known_release_date"
+        private const val KEY_LAST_KNOWN_RELEASE_NAME = "last_known_release_name"
     }
 
-    suspend fun checkForUpdates(): UpdateInfo? = withContext(Dispatchers.IO) {
+    suspend fun checkForUpdates(force: Boolean = false): UpdateInfo? = withContext(Dispatchers.IO) {
         try {
             _updateState.value = UpdateState.Checking
 
@@ -91,9 +92,13 @@ class AppUpdateManager(private val context: Context) {
                 return@withContext null
             }
 
-            // Compare publishedAt with our stored timestamp to determine if this is a fresh build
+            // Compare publishedAt and releaseName with stored values
             val lastInstalledDate = prefs.getString(KEY_LAST_KNOWN_RELEASE_DATE, "") ?: ""
-            val isNewer = lastInstalledDate.isEmpty() || publishedAt != lastInstalledDate
+            val lastInstalledName = prefs.getString(KEY_LAST_KNOWN_RELEASE_NAME, "") ?: ""
+            val isNewer = force ||
+                lastInstalledDate.isEmpty() ||
+                publishedAt != lastInstalledDate ||
+                (releaseName.isNotEmpty() && releaseName != lastInstalledName)
 
             val info = UpdateInfo(
                 hasUpdate = isNewer,
@@ -155,8 +160,11 @@ class AppUpdateManager(private val context: Context) {
                 }
             }
 
-            // Save the published date so we know this version was installed
-            prefs.edit().putString(KEY_LAST_KNOWN_RELEASE_DATE, info.publishedAt).apply()
+            // Save the published date and release name so we know this version was installed
+            prefs.edit()
+                .putString(KEY_LAST_KNOWN_RELEASE_DATE, info.publishedAt)
+                .putString(KEY_LAST_KNOWN_RELEASE_NAME, info.releaseName)
+                .apply()
 
             _updateState.value = UpdateState.ReadyToInstall(apkFile)
 
