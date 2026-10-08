@@ -18,6 +18,8 @@ data class PermissionStatus(
     val isBatteryOptimizedIgnored: Boolean,
     val hasNotification: Boolean
 ) {
+    val hasOverlayPermission: Boolean get() = hasOverlay
+    val isIgnoringBatteryOptimizations: Boolean get() = isBatteryOptimizedIgnored
     val isCorePermissionsGranted: Boolean
         get() = hasUsageAccess && hasOverlay
 }

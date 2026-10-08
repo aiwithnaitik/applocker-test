@@ -614,15 +614,17 @@ fun SettingsScreen(
 
     if (showPinDialog) {
         PinSetupDialog(
-            onDismiss = { showPinDialog = false },
-            onPinSaved = { showPinDialog = false }
+            preferencesDataSource = preferencesDataSource,
+            onDismissRequest = { showPinDialog = false },
+            onPinCreated = { showPinDialog = false }
         )
     }
 
     if (showPatternDialog) {
         PatternSetupDialog(
-            onDismiss = { showPatternDialog = false },
-            onPatternSaved = { showPatternDialog = false }
+            preferencesDataSource = preferencesDataSource,
+            onDismissRequest = { showPatternDialog = false },
+            onPatternCreated = { showPatternDialog = false }
         )
     }
 }
