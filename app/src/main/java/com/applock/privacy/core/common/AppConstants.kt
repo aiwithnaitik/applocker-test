@@ -20,5 +20,8 @@ object AppConstants {
     const val ROUTE_PRIVATE_BROWSER = "private_browser"
     const val ROUTE_DISGUISE_COVER = "disguise_cover"
     const val ROUTE_PRO_SUBSCRIPTION = "pro_subscription"
+    const val ROUTE_MEDIA_VAULT = "media_vault"
+    const val ROUTE_UNINSTALL_PROTECTION = "uninstall_protection"
 }
+
 

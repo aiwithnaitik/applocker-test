@@ -655,16 +655,9 @@ private fun AppListItem(
                         color = TextPrimary,
                         maxLines = 1
                     )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = if (app.isSystemApp) "System App • ${app.packageName}" else app.packageName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextMuted,
-                        fontSize = 11.sp,
-                        maxLines = 1
-                    )
                 }
             }
+
 
             Spacer(modifier = Modifier.width(8.dp))
 
@@ -685,7 +678,7 @@ private fun AppListItem(
                 Icon(
                     imageVector = if (isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
                     contentDescription = if (isLocked) "Locked" else "Unlocked",
-                    tint = if (isLocked) BackgroundDeep else TextMuted,
+                    tint = if (isLocked) Color.White else TextMuted,
                     modifier = Modifier.size(20.dp)
                 )
             }

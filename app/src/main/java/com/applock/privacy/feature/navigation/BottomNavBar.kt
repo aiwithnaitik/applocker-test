@@ -84,11 +84,11 @@ fun BottomNavBar(
 
                     val interactionSource = remember { MutableInteractionSource() }
 
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
+                    Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
+                            .size(46.dp)
+                            .clip(CircleShape)
+                            .background(if (selected) ElectricCyan.copy(alpha = 0.15f) else Color.Transparent)
                             .clickable(
                                 interactionSource = interactionSource,
                                 indication = null
@@ -102,36 +102,18 @@ fun BottomNavBar(
                                         restoreState = true
                                     }
                                 }
-                            }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            if (selected) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(ElectricCyan.copy(alpha = 0.16f))
-                                )
-                            }
-                            Icon(
-                                imageVector = screen.icon,
-                                contentDescription = screen.title,
-                                tint = animatedTint,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(3.dp))
-
-                        Text(
-                            text = screen.title,
-                            fontSize = 11.sp,
-                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                            color = animatedTint
+                        Icon(
+                            imageVector = screen.icon,
+                            contentDescription = screen.title,
+                            tint = animatedTint,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
+
             }
         }
     }

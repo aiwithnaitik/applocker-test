@@ -57,6 +57,8 @@ fun ToolsScreen(
     onNavigateToWebsiteBlocker: () -> Unit = {},
     onNavigateToPrivateBrowser: () -> Unit = {},
     onNavigateToDisguiseCover: () -> Unit = {},
+    onNavigateToMediaVault: () -> Unit = {},
+    onNavigateToUninstallProtection: () -> Unit = {},
     onNavigateToProSubscription: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -138,29 +140,43 @@ fun ToolsScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Tool 6: Pro VIP Membership (Phase 22)
+        // Tool 6: Private Media Vault (Phase 22)
         ToolCard(
-            title = "Pro VIP Access",
-            description = "Unlock unlimited custom themes, advanced intruder tools, and priority protection.",
+            title = "Private Media Vault",
+            description = "Encrypted private vault to hide sensitive photos and videos from your phone's Gallery.",
             icon = Icons.Default.FolderSpecial,
             iconTint = ElectricCyan,
             statusText = "ACTIVE",
             statusColor = ElectricCyan,
-            onClick = onNavigateToProSubscription
+            onClick = onNavigateToMediaVault
         )
-
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Tool 7: Uninstall Protection
+        // Tool 7: Uninstall Protection (Phase 25)
         ToolCard(
             title = "Uninstall Protection",
-            description = "Prevents unauthorized users from uninstalling AppLock to bypass security.",
+            description = "Prevents unauthorized users from uninstalling AppLock or clearing app data to bypass security.",
             icon = Icons.Default.SecurityUpdateGood,
             iconTint = EmeraldSecure,
-            statusText = "PHASE 25",
-            statusColor = EmeraldSecure
+            statusText = "ACTIVE",
+            statusColor = EmeraldSecure,
+            onClick = onNavigateToUninstallProtection
         )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Tool 8: Pro VIP Membership
+        ToolCard(
+            title = "Pro VIP Access",
+            description = "Unlock unlimited custom themes, advanced intruder tools, and priority protection.",
+            icon = Icons.Default.Security,
+            iconTint = BrightAzure,
+            statusText = "ACTIVE",
+            statusColor = BrightAzure,
+            onClick = onNavigateToProSubscription
+        )
+
 
         Spacer(modifier = Modifier.height(24.dp))
     }

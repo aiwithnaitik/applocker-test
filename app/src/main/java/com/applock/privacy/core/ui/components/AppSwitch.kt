@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.applock.privacy.core.ui.theme.BackgroundDeep
 import com.applock.privacy.core.ui.theme.BorderSubtle
+import com.applock.privacy.core.ui.theme.BrightAzure
 import com.applock.privacy.core.ui.theme.ElectricCyan
 import com.applock.privacy.core.ui.theme.SurfaceCard
 
@@ -23,10 +24,10 @@ fun AppSwitch(
         modifier = modifier,
         enabled = enabled,
         colors = SwitchDefaults.colors(
-            checkedThumbColor = BackgroundDeep,
-            checkedTrackColor = ElectricCyan,
-            uncheckedThumbColor = Color(0xFF64748B),
-            uncheckedTrackColor = SurfaceCard,
+            checkedThumbColor = Color.White,
+            checkedTrackColor = BrightAzure,
+            uncheckedThumbColor = Color.White,
+            uncheckedTrackColor = Color(0xFFCBD5E1),
             uncheckedBorderColor = BorderSubtle
         )
     )

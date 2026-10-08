@@ -87,6 +87,20 @@ data class CustomThemeConfig(
 
 object AppThemeCatalog {
 
+    val PureLight = AppTheme(
+        id = "pure_light",
+        name = "Pure Light",
+        description = "Crisp minimalist porcelain white with vibrant ocean azure.",
+        bgStart = Color(0xFFF8FAFC),
+        bgEnd = Color(0xFFF1F5F9),
+        accentColor = Color(0xFF0284C7),
+        cardColor = Color(0xFFFFFFFF),
+        keyColor = Color(0xFFE2E8F0),
+        textColor = Color(0xFF0F172A),
+        glowColor = Color(0xFF0284C7).copy(alpha = 0.2f),
+        isPremium = false
+    )
+
     val Sapphire = AppTheme(
         id = "sapphire_glass",
         name = "Sapphire Glass",
@@ -189,6 +203,7 @@ object AppThemeCatalog {
     )
 
     val allThemes: List<AppTheme> = listOf(
+        PureLight,
         Sapphire,
         CyberNeon,
         EmeraldMatrix,
@@ -203,7 +218,7 @@ object AppThemeCatalog {
         if (custom != null) {
             return custom.toAppTheme()
         }
-        return allThemes.find { it.id == id } ?: Sapphire
+        return allThemes.find { it.id == id } ?: PureLight
     }
 
     fun parseCustomThemesJson(jsonString: String?): List<CustomThemeConfig> {

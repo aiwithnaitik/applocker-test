@@ -25,9 +25,12 @@ import com.applock.privacy.feature.onboarding.OnboardingReasonScreen
 import com.applock.privacy.feature.onboarding.SplashScreen
 import com.applock.privacy.feature.permissions.PermissionScreen
 import com.applock.privacy.feature.pro.ProSubscriptionScreen
+import com.applock.privacy.feature.security.UninstallProtectionScreen
 import com.applock.privacy.feature.settings.SettingsScreen
 import com.applock.privacy.feature.themes.ThemesScreen
 import com.applock.privacy.feature.tools.ToolsScreen
+import com.applock.privacy.feature.vault.MediaVaultScreen
+
 
 @Composable
 fun AppNavHost() {
@@ -163,6 +166,24 @@ fun AppNavHost() {
                 )
             }
 
+            // Private Media Vault Screen (Phase 22)
+            composable(AppConstants.ROUTE_MEDIA_VAULT) {
+                MediaVaultScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            // Uninstall Protection Screen (Phase 25)
+            composable(AppConstants.ROUTE_UNINSTALL_PROTECTION) {
+                UninstallProtectionScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
             // Main App Shell Routes
             composable(Screen.Home.route) {
                 HomeScreen(
@@ -189,11 +210,18 @@ fun AppNavHost() {
                     onNavigateToDisguiseCover = {
                         navController.navigate(AppConstants.ROUTE_DISGUISE_COVER)
                     },
+                    onNavigateToMediaVault = {
+                        navController.navigate(AppConstants.ROUTE_MEDIA_VAULT)
+                    },
+                    onNavigateToUninstallProtection = {
+                        navController.navigate(AppConstants.ROUTE_UNINSTALL_PROTECTION)
+                    },
                     onNavigateToProSubscription = {
                         navController.navigate(AppConstants.ROUTE_PRO_SUBSCRIPTION)
                     }
                 )
             }
+
 
             composable(Screen.Themes.route) {
                 ThemesScreen()

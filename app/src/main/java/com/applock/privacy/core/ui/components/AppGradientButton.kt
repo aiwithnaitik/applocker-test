@@ -30,7 +30,7 @@ fun AppGradientButton(
     brush: Brush = PrimaryGradient,
     shape: RoundedCornerShape = PillShape,
     height: Dp = 52.dp,
-    textColor: Color = BackgroundDeep
+    textColor: Color = Color.White
 ) {
     val alpha = if (enabled) 1f else 0.5f
 

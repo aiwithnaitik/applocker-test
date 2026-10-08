@@ -73,11 +73,13 @@ class AppPreferencesDataSource(private val context: Context) {
         val KEY_DISGUISE_APPLOCK_ONLY = booleanPreferencesKey("disguise_applock_only")
         val KEY_LAUNCHER_ALIAS = stringPreferencesKey("launcher_alias") // "default", "calculator", "notes"
 
-        // Phase 22: Pro Subscription
+        // Phase 22: Pro Subscription & Media Vault
         val KEY_IS_PRO_USER = booleanPreferencesKey("is_pro_user")
         val KEY_PRO_PLAN_ID = stringPreferencesKey("pro_plan_id")
         val KEY_PRO_EXPIRY_TIMESTAMP = longPreferencesKey("pro_expiry_timestamp")
+        val KEY_VAULT_MEDIA_JSON = stringPreferencesKey("vault_media_json")
     }
+
 
 
     val lockedPackagesFlow: Flow<Set<String>> = context.dataStore.data.map { preferences ->
@@ -105,7 +107,7 @@ class AppPreferencesDataSource(private val context: Context) {
     }
 
     val selectedThemeIdFlow: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[KEY_SELECTED_THEME_ID] ?: "sapphire_glass"
+        preferences[KEY_SELECTED_THEME_ID] ?: "pure_light"
     }
 
     val isBiometricEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
@@ -123,7 +125,7 @@ class AppPreferencesDataSource(private val context: Context) {
 
     // Phase 13: Unlocked Themes
     val unlockedThemeIdsFlow: Flow<Set<String>> = context.dataStore.data.map { preferences ->
-        preferences[KEY_UNLOCKED_THEMES] ?: setOf("sapphire_glass", "cyber_neon", "emerald_matrix", "obsidian_dark")
+        preferences[KEY_UNLOCKED_THEMES] ?: setOf("pure_light", "sapphire_glass", "cyber_neon", "emerald_matrix", "obsidian_dark")
     }
 
     // Phase 14: Settings Customization
@@ -221,6 +223,11 @@ class AppPreferencesDataSource(private val context: Context) {
     val proExpiryTimestampFlow: Flow<Long> = context.dataStore.data.map { preferences ->
         preferences[KEY_PRO_EXPIRY_TIMESTAMP] ?: 0L
     }
+
+    val vaultMediaFlow: Flow<List<com.applock.privacy.feature.vault.VaultMediaItem>> = context.dataStore.data.map { preferences ->
+        com.applock.privacy.feature.vault.VaultMediaItem.parseMediaJson(preferences[KEY_VAULT_MEDIA_JSON])
+    }
+
 
 
     // Mutators
@@ -345,7 +352,7 @@ class AppPreferencesDataSource(private val context: Context) {
             list.removeAll { it.id == themeId }
             preferences[KEY_CUSTOM_THEMES_JSON] = AppThemeCatalog.serializeCustomThemes(list)
             if (preferences[KEY_SELECTED_THEME_ID] == themeId) {
-                preferences[KEY_SELECTED_THEME_ID] = "sapphire_glass"
+                preferences[KEY_SELECTED_THEME_ID] = "pure_light"
             }
         }
     }
@@ -353,7 +360,7 @@ class AppPreferencesDataSource(private val context: Context) {
     // Phase 13 Mutators
     suspend fun unlockTheme(themeId: String) {
         context.dataStore.edit { preferences ->
-            val set = (preferences[KEY_UNLOCKED_THEMES] ?: setOf("sapphire_glass", "cyber_neon", "emerald_matrix", "obsidian_dark")).toMutableSet()
+            val set = (preferences[KEY_UNLOCKED_THEMES] ?: setOf("pure_light", "sapphire_glass", "cyber_neon", "emerald_matrix", "obsidian_dark")).toMutableSet()
             set.add(themeId)
             preferences[KEY_UNLOCKED_THEMES] = set
         }
@@ -554,5 +561,22 @@ class AppPreferencesDataSource(private val context: Context) {
             preferences.remove(KEY_PRO_EXPIRY_TIMESTAMP)
         }
     }
+
+    // Media Vault Mutators
+    suspend fun addVaultMediaItem(item: com.applock.privacy.feature.vault.VaultMediaItem) {
+        context.dataStore.edit { preferences ->
+            val list = com.applock.privacy.feature.vault.VaultMediaItem.parseMediaJson(preferences[KEY_VAULT_MEDIA_JSON]).toMutableList()
+            list.add(0, item)
+            preferences[KEY_VAULT_MEDIA_JSON] = com.applock.privacy.feature.vault.VaultMediaItem.serializeMedia(list)
+        }
+    }
+
+    suspend fun deleteVaultMediaItem(id: String) {
+        context.dataStore.edit { preferences ->
+            val list = com.applock.privacy.feature.vault.VaultMediaItem.parseMediaJson(preferences[KEY_VAULT_MEDIA_JSON]).filterNot { it.id == id }
+            preferences[KEY_VAULT_MEDIA_JSON] = com.applock.privacy.feature.vault.VaultMediaItem.serializeMedia(list)
+        }
+    }
 }
+
 

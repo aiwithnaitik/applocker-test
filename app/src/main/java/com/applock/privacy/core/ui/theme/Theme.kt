@@ -3,19 +3,20 @@ package com.applock.privacy.core.ui.theme
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
+private val LightColorScheme = lightColorScheme(
     primary = BrightAzure,
-    onPrimary = TextPrimary,
+    onPrimary = Color.White,
     secondary = ElectricCyan,
-    onSecondary = BackgroundDeep,
-    tertiary = NeonIce,
+    onSecondary = Color.White,
+    tertiary = DeepSapphire,
     background = BackgroundDeep,
     onBackground = TextPrimary,
     surface = SurfaceCard,
@@ -24,16 +25,15 @@ private val DarkColorScheme = darkColorScheme(
     onSurfaceVariant = TextSecondary,
     outline = BorderSubtle,
     error = RoseDestructive,
-    onError = TextPrimary
+    onError = Color.White
 )
 
 @Composable
 fun AppLockTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    // AppLock is styled primarily with the premium deep cyber sapphire theme
-    val colorScheme = DarkColorScheme
+    val colorScheme = LightColorScheme
     val view = LocalView.current
 
     if (!view.isInEditMode) {
@@ -42,8 +42,8 @@ fun AppLockTheme(
             window?.let {
                 it.statusBarColor = BackgroundDeep.toArgb()
                 it.navigationBarColor = BackgroundDeep.toArgb()
-                WindowCompat.getInsetsController(it, view).isAppearanceLightStatusBars = false
-                WindowCompat.getInsetsController(it, view).isAppearanceLightNavigationBars = false
+                WindowCompat.getInsetsController(it, view).isAppearanceLightStatusBars = true
+                WindowCompat.getInsetsController(it, view).isAppearanceLightNavigationBars = true
             }
         }
     }

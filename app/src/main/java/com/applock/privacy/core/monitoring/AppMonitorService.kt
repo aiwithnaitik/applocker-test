@@ -191,6 +191,9 @@ class AppMonitorService : Service() {
                         if (locked.isNotEmpty()) {
                             val foregroundPackage = detectForegroundPackage(usageStatsManager)
 
+                            // Immediate Relock: If user exited or switched away from the unlocked app, revoke unlock!
+                            AppLockSession.onForegroundPackageChanged(foregroundPackage)
+
                             if (foregroundPackage != null &&
                                 foregroundPackage != packageName &&
                                 locked.contains(foregroundPackage)
@@ -204,12 +207,12 @@ class AppMonitorService : Service() {
                                 }
                             }
 
-                            // Adaptive rate: if user stays on the same package, relax delay to 450ms
+                            // Adaptive rate: if user stays on the same package, relax delay to 350ms
                             if (foregroundPackage == lastObservedPackage) {
-                                nextDelay = 450L
+                                nextDelay = 350L
                             } else {
                                 lastObservedPackage = foregroundPackage
-                                nextDelay = 220L
+                                nextDelay = 180L
                             }
                         }
                     }
@@ -223,7 +226,7 @@ class AppMonitorService : Service() {
 
     private fun detectForegroundPackage(usageStatsManager: UsageStatsManager): String? {
         val now = System.currentTimeMillis()
-        val events = usageStatsManager.queryEvents(now - 6000, now)
+        val events = usageStatsManager.queryEvents(now - 4000, now)
         val event = UsageEvents.Event()
         var lastForeground: String? = null
 
@@ -239,8 +242,9 @@ class AppMonitorService : Service() {
         }
 
         // Secondary fallback
-        val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, now - 8000, now)
+        val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, now - 6000, now)
         return stats?.maxByOrNull { it.lastTimeUsed }?.packageName
     }
 }
+
 

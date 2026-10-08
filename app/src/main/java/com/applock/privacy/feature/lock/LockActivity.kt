@@ -101,10 +101,12 @@ class LockActivity : FragmentActivity() {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 }
                 startActivity(homeIntent)
+                AppLockSession.clearSession()
                 AppLockSession.isLockActivityShowing = false
                 finish()
             }
         })
+
 
         val preferencesDataSource = AppPreferencesDataSource(this)
         val packageManager = packageManager
@@ -125,7 +127,7 @@ class LockActivity : FragmentActivity() {
 
         setContent {
             AppLockTheme {
-                val currentThemeId by preferencesDataSource.selectedThemeIdFlow.collectAsState(initial = "sapphire_glass")
+                val currentThemeId by preferencesDataSource.selectedThemeIdFlow.collectAsState(initial = "pure_light")
                 val customThemes by preferencesDataSource.customThemesFlow.collectAsState(initial = emptyList())
                 val activeTheme = remember(currentThemeId, customThemes) {
                     AppThemeCatalog.getThemeById(currentThemeId, customThemes)
