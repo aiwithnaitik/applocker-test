@@ -2,6 +2,8 @@ package com.applock.privacy.feature.lock
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
@@ -23,8 +25,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Grid3x3
+import androidx.compose.material.icons.filled.LockClock
 import androidx.compose.material.icons.filled.Pin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -42,14 +44,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.fragment.app.FragmentActivity
 import com.applock.privacy.core.monitoring.AppLockSession
+import com.applock.privacy.core.security.AuthResult
 import com.applock.privacy.core.security.BiometricHelper
 import com.applock.privacy.core.security.SecurityManager
 import com.applock.privacy.core.theme.AppTheme
@@ -60,6 +64,7 @@ import com.applock.privacy.data.local.AppPreferencesDataSource
 import com.applock.privacy.feature.auth.PatternLockView
 import com.applock.privacy.feature.auth.PinDotsIndicator
 import com.applock.privacy.feature.auth.PinKeypad
+import com.applock.privacy.feature.intruder.IntruderCaptureManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -120,9 +125,16 @@ class LockActivity : FragmentActivity() {
         setContent {
             AppLockTheme {
                 val currentThemeId by preferencesDataSource.selectedThemeIdFlow.collectAsState(initial = "sapphire_glass")
-                val activeTheme = remember(currentThemeId) { AppThemeCatalog.getThemeById(currentThemeId) }
+                val customThemes by preferencesDataSource.customThemesFlow.collectAsState(initial = emptyList())
+                val activeTheme = remember(currentThemeId, customThemes) {
+                    AppThemeCatalog.getThemeById(currentThemeId, customThemes)
+                }
+
                 val defaultLockType by preferencesDataSource.lockTypeFlow.collectAsState(initial = "pin")
                 val hasPattern by preferencesDataSource.hasPatternConfiguredFlow.collectAsState(initial = false)
+                val isPatternVisible by preferencesDataSource.isPatternVisibleFlow.collectAsState(initial = true)
+                val isHapticEnabled by preferencesDataSource.isHapticEnabledFlow.collectAsState(initial = true)
+                val lockoutUntil by preferencesDataSource.lockoutUntilTimestampFlow.collectAsState(initial = 0L)
 
                 LockScreenContent(
                     appName = appName,
@@ -131,6 +143,9 @@ class LockActivity : FragmentActivity() {
                     theme = activeTheme,
                     initialLockType = defaultLockType,
                     hasPatternConfigured = hasPattern,
+                    isPatternVisible = isPatternVisible,
+                    isHapticEnabled = isHapticEnabled,
+                    lockoutUntilTimestamp = lockoutUntil,
                     preferencesDataSource = preferencesDataSource,
                     onUnlockSuccess = {
                         AppLockSession.unlockPackage(targetPackage)
@@ -157,6 +172,9 @@ private fun LockScreenContent(
     theme: AppTheme,
     initialLockType: String,
     hasPatternConfigured: Boolean,
+    isPatternVisible: Boolean,
+    isHapticEnabled: Boolean,
+    lockoutUntilTimestamp: Long,
     preferencesDataSource: AppPreferencesDataSource,
     onUnlockSuccess: () -> Unit,
     activity: FragmentActivity
@@ -168,33 +186,82 @@ private fun LockScreenContent(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Auto-prompt biometrics if available and enabled
-    LaunchedEffect(Unit) {
-        val isBiometricEnabled = preferencesDataSource.isBiometricEnabledFlow.first()
-        if (isBiometricEnabled && BiometricHelper.isBiometricAvailable(activity)) {
-            delay(300)
-            BiometricHelper.showBiometricPrompt(
-                activity = activity,
-                title = "Unlock $appName",
-                subtitle = "Verify biometric identity to continue",
-                negativeButtonText = "Use Code",
-                onSuccess = onUnlockSuccess,
-                onError = { /* silently allow manual PIN/Pattern */ }
-            )
+    // Real-time lockout timer countdown
+    var remainingLockoutSeconds by remember { mutableStateOf(0) }
+    LaunchedEffect(lockoutUntilTimestamp) {
+        while (true) {
+            val now = System.currentTimeMillis()
+            if (lockoutUntilTimestamp > now) {
+                remainingLockoutSeconds = (((lockoutUntilTimestamp - now) / 1000L).toInt() + 1).coerceAtLeast(1)
+            } else {
+                remainingLockoutSeconds = 0
+                break
+            }
+            delay(1000)
         }
+    }
+
+    val isLockedOut = remainingLockoutSeconds > 0
+
+    // Auto-prompt biometrics if available, enabled, and not locked out
+    LaunchedEffect(isLockedOut) {
+        if (!isLockedOut) {
+            val isBiometricEnabled = preferencesDataSource.isBiometricEnabledFlow.first()
+            if (isBiometricEnabled && BiometricHelper.isBiometricAvailable(activity)) {
+                delay(300)
+                BiometricHelper.showBiometricPrompt(
+                    activity = activity,
+                    title = "Unlock $appName",
+                    subtitle = "Verify biometric identity to continue",
+                    negativeButtonText = "Use Code",
+                    onSuccess = onUnlockSuccess,
+                    onError = { /* silently allow manual PIN/Pattern */ }
+                )
+            }
+        }
+    }
+
+    // Custom wallpaper image loading
+    val customWallpaperBitmap = remember(theme.backgroundImageUri) {
+        if (!theme.backgroundImageUri.isNullOrEmpty()) {
+            try {
+                val uri = Uri.parse(theme.backgroundImageUri)
+                val stream = activity.contentResolver.openInputStream(uri)
+                stream?.use { BitmapFactory.decodeStream(it)?.asImageBitmap() }
+            } catch (_: Exception) {
+                null
+            }
+        } else null
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(theme.backgroundBrush)
-            .padding(horizontal = 24.dp, vertical = 28.dp),
+            .background(theme.backgroundBrush),
         contentAlignment = Alignment.Center
     ) {
+        // Render custom wallpaper if provided
+        if (customWallpaperBitmap != null) {
+            Image(
+                bitmap = customWallpaperBitmap,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            // Translucent glass dark overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.65f))
+            )
+        }
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 28.dp)
         ) {
             // App Icon
             Box(
@@ -238,9 +305,32 @@ private fun LockScreenContent(
                 fontSize = 12.sp
             )
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            if (errorMessage != null) {
+            // Lockout banner or Error status
+            if (isLockedOut) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(PillShape)
+                        .background(Color(0xFFFF5252).copy(alpha = 0.18f))
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LockClock,
+                        contentDescription = null,
+                        tint = Color(0xFFFF5252),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Too many attempts. Retry in ${remainingLockoutSeconds}s",
+                        color = Color(0xFFFF5252),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            } else if (errorMessage != null) {
                 Text(
                     text = errorMessage ?: "",
                     color = Color(0xFFFF5252),
@@ -248,29 +338,47 @@ private fun LockScreenContent(
                     fontWeight = FontWeight.SemiBold
                 )
             } else {
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(20.dp))
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             if (currentMode == "pattern" && hasPatternConfigured) {
                 // Pattern Lock Mode
                 PatternLockView(
                     theme = theme,
                     isError = isError,
+                    enabled = !isLockedOut,
+                    isPatternVisible = isPatternVisible,
                     onPatternComplete = { pattern ->
+                        if (isLockedOut) return@PatternLockView
                         coroutineScope.launch {
-                            val isCorrect = SecurityManager.verifyPattern(preferencesDataSource, pattern)
-                            if (isCorrect) {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onUnlockSuccess()
-                            } else {
-                                isError = true
-                                errorMessage = "Incorrect pattern"
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                delay(650)
-                                isError = false
-                                errorMessage = null
+                            val result = SecurityManager.verifyPatternWithResult(preferencesDataSource, pattern)
+                            when (result) {
+                                is AuthResult.Success -> {
+                                    if (isHapticEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onUnlockSuccess()
+                                }
+                                is AuthResult.Failure -> {
+                                    isError = true
+                                    errorMessage = if (result.isNowLockedOut) "Locked out! Try again later." else "Incorrect pattern"
+                                    if (isHapticEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+
+                                    // Intruder selfie check
+                                    val isIntruderEnabled = preferencesDataSource.isIntruderDetectionEnabledFlow.first()
+                                    val threshold = preferencesDataSource.intruderThresholdFlow.first()
+                                    if (isIntruderEnabled && result.failedCount >= threshold) {
+                                        IntruderCaptureManager.captureSilently(activity, targetPackage, appName, result.failedCount)
+                                    }
+
+                                    delay(650)
+                                    isError = false
+                                    if (!result.isNowLockedOut) errorMessage = null
+                                }
+                                is AuthResult.LockedOut -> {
+                                    isError = true
+                                    errorMessage = "Locked out. Try again in ${result.remainingSeconds}s"
+                                }
                             }
                         }
                     }
@@ -287,40 +395,60 @@ private fun LockScreenContent(
 
                 PinKeypad(
                     onNumberClick = { digit ->
+                        if (isLockedOut) return@PinKeypad
                         if (enteredPin.length < 4) {
                             val newPin = enteredPin + digit
                             enteredPin = newPin
                             isError = false
                             errorMessage = null
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            if (isHapticEnabled) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
 
                             if (newPin.length == 4) {
                                 coroutineScope.launch {
-                                    val isCorrect = SecurityManager.verifyPin(preferencesDataSource, newPin)
-                                    if (isCorrect) {
-                                        onUnlockSuccess()
-                                    } else {
-                                        isError = true
-                                        errorMessage = "Incorrect PIN"
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        delay(650)
-                                        enteredPin = ""
-                                        isError = false
-                                        errorMessage = null
+                                    val result = SecurityManager.verifyPinWithResult(preferencesDataSource, newPin)
+                                    when (result) {
+                                        is AuthResult.Success -> {
+                                            if (isHapticEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            onUnlockSuccess()
+                                        }
+                                        is AuthResult.Failure -> {
+                                            isError = true
+                                            errorMessage = if (result.isNowLockedOut) "Locked out! Try again later." else "Incorrect PIN"
+                                            if (isHapticEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+
+                                            // Intruder selfie check
+                                            val isIntruderEnabled = preferencesDataSource.isIntruderDetectionEnabledFlow.first()
+                                            val threshold = preferencesDataSource.intruderThresholdFlow.first()
+                                            if (isIntruderEnabled && result.failedCount >= threshold) {
+                                                IntruderCaptureManager.captureSilently(activity, targetPackage, appName, result.failedCount)
+                                            }
+
+                                            delay(650)
+                                            enteredPin = ""
+                                            isError = false
+                                            if (!result.isNowLockedOut) errorMessage = null
+                                        }
+                                        is AuthResult.LockedOut -> {
+                                            isError = true
+                                            errorMessage = "Locked out. Try again in ${result.remainingSeconds}s"
+                                            enteredPin = ""
+                                        }
                                     }
                                 }
                             }
                         }
                     },
                     onDeleteClick = {
+                        if (isLockedOut) return@PinKeypad
                         if (enteredPin.isNotEmpty()) {
                             enteredPin = enteredPin.dropLast(1)
                             isError = false
                             errorMessage = null
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            if (isHapticEnabled) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         }
                     },
                     onBiometricClick = {
+                        if (isLockedOut) return@PinKeypad
                         if (BiometricHelper.isBiometricAvailable(activity)) {
                             BiometricHelper.showBiometricPrompt(
                                 activity = activity,
@@ -344,10 +472,12 @@ private fun LockScreenContent(
                         .clip(PillShape)
                         .background(theme.keyColor.copy(alpha = 0.7f))
                         .clickable {
-                            currentMode = if (currentMode == "pin") "pattern" else "pin"
-                            enteredPin = ""
-                            errorMessage = null
-                            isError = false
+                            if (!isLockedOut) {
+                                currentMode = if (currentMode == "pin") "pattern" else "pin"
+                                enteredPin = ""
+                                errorMessage = null
+                                isError = false
+                            }
                         }
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically

@@ -31,6 +31,7 @@ fun PatternLockView(
     theme: AppTheme,
     isError: Boolean = false,
     enabled: Boolean = true,
+    isPatternVisible: Boolean = true,
     onPatternComplete: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -125,7 +126,7 @@ fun PatternLockView(
             }
 
             // Draw connecting lines between consecutive selected dots
-            if (selectedDots.size > 1) {
+            if ((isPatternVisible || isError) && selectedDots.size > 1) {
                 for (i in 0 until selectedDots.size - 1) {
                     val p1 = getDotCenter(selectedDots[i])
                     val p2 = getDotCenter(selectedDots[i + 1])
@@ -140,7 +141,7 @@ fun PatternLockView(
             }
 
             // Draw elastic line from last dot to current finger touch point
-            if (selectedDots.isNotEmpty() && currentDragPosition != null) {
+            if (isPatternVisible && selectedDots.isNotEmpty() && currentDragPosition != null) {
                 val lastDotCenter = getDotCenter(selectedDots.last())
                 drawLine(
                     color = dotColor.copy(alpha = 0.5f),

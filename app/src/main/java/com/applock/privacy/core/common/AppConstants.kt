@@ -14,4 +14,5 @@ object AppConstants {
     const val ROUTE_THEMES = "themes"
     const val ROUTE_SETTINGS = "settings"
     const val ROUTE_PERMISSIONS = "permissions"
+    const val ROUTE_INTRUDER_LOGS = "intruder_logs"
 }

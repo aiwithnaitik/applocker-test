@@ -97,6 +97,15 @@ fun AppNavHost() {
                 )
             }
 
+            // Intruder Logs Screen
+            composable(AppConstants.ROUTE_INTRUDER_LOGS) {
+                com.applock.privacy.feature.intruder.IntruderLogsScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
             // Main App Shell Routes
             composable(Screen.Home.route) {
                 HomeScreen(
@@ -107,7 +116,11 @@ fun AppNavHost() {
             }
 
             composable(Screen.Tools.route) {
-                ToolsScreen()
+                ToolsScreen(
+                    onNavigateToIntruderLogs = {
+                        navController.navigate(AppConstants.ROUTE_INTRUDER_LOGS)
+                    }
+                )
             }
 
             composable(Screen.Themes.route) {
@@ -118,6 +131,9 @@ fun AppNavHost() {
                 SettingsScreen(
                     onNavigateToPermissions = {
                         navController.navigate(AppConstants.ROUTE_PERMISSIONS)
+                    },
+                    onNavigateToIntruderLogs = {
+                        navController.navigate(AppConstants.ROUTE_INTRUDER_LOGS)
                     },
                     onResetOnboarding = {
                         navController.navigate(AppConstants.ROUTE_SPLASH) {

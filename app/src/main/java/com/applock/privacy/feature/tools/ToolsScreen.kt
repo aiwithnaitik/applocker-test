@@ -1,6 +1,7 @@
 package com.applock.privacy.feature.tools
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,6 +49,7 @@ import com.applock.privacy.core.ui.theme.TextSecondary
 
 @Composable
 fun ToolsScreen(
+    onNavigateToIntruderLogs: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -63,14 +65,15 @@ fun ToolsScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Tool 1: Intruder Selfie
+        // Tool 1: Intruder Selfie (Active in Phase 16)
         ToolCard(
-            title = "Intruder Selfie",
-            description = "Silently snaps a photo of anyone entering an incorrect PIN or pattern.",
+            title = "Intruder Selfie & History",
+            description = "Silently snaps a photo of unauthorized intruders on failed unlocks. Tap to view captured logs.",
             icon = Icons.Default.CameraAlt,
-            iconTint = RoseDestructive,
-            statusText = "PHASE 14",
-            statusColor = RoseDestructive
+            iconTint = EmeraldSecure,
+            statusText = "ACTIVE",
+            statusColor = EmeraldSecure,
+            onClick = onNavigateToIntruderLogs
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -81,7 +84,7 @@ fun ToolsScreen(
             description = "Conceals incoming messages and content previews from the lock screen.",
             icon = Icons.Default.NotificationsActive,
             iconTint = AmberWarning,
-            statusText = "PHASE 16",
+            statusText = "PHASE 18",
             statusColor = AmberWarning
         )
 
@@ -93,7 +96,7 @@ fun ToolsScreen(
             description = "Displays a realistic 'App Has Stopped' crash window or calculator decoy.",
             icon = Icons.Default.VisibilityOff,
             iconTint = BrightAzure,
-            statusText = "PHASE 17",
+            statusText = "PHASE 21",
             statusColor = BrightAzure
         )
 
@@ -105,7 +108,7 @@ fun ToolsScreen(
             description = "Encrypted private vault to hide sensitive photos, videos, and files.",
             icon = Icons.Default.FolderSpecial,
             iconTint = ElectricCyan,
-            statusText = "PHASE 18",
+            statusText = "PHASE 22",
             statusColor = ElectricCyan
         )
 
@@ -117,7 +120,7 @@ fun ToolsScreen(
             description = "Prevents unauthorized users from uninstalling AppLock to bypass security.",
             icon = Icons.Default.SecurityUpdateGood,
             iconTint = EmeraldSecure,
-            statusText = "PHASE 19",
+            statusText = "PHASE 25",
             statusColor = EmeraldSecure
         )
 
@@ -132,9 +135,14 @@ private fun ToolCard(
     icon: ImageVector,
     iconTint: Color,
     statusText: String,
-    statusColor: Color
+    statusColor: Color,
+    onClick: (() -> Unit)? = null
 ) {
-    AppGlassCard(modifier = Modifier.fillMaxWidth()) {
+    AppGlassCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top,

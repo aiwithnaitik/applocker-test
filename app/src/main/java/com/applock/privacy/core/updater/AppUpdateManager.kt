@@ -125,24 +125,37 @@ class AppUpdateManager(private val context: Context) {
         try {
             _updateState.value = UpdateState.Downloading(0f)
 
-            val url = URL(info.downloadUrl)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 15000
-            connection.readTimeout = 30000
+            var currentUrl = info.downloadUrl
+            var connection: HttpURLConnection
+            var redirectCount = 0
 
-            // Follow redirects if GitHub redirects to Amazon S3
-            var redirectConn = connection
-            var status = redirectConn.responseCode
-            if (status == HttpURLConnection.HTTP_MOVED_TEMP || status == HttpURLConnection.HTTP_MOVED_PERM || status == 307 || status == 308) {
-                val newUrl = redirectConn.getHeaderField("Location")
-                redirectConn = URL(newUrl).openConnection() as HttpURLConnection
+            // Follow multi-hop redirects up to 5 times (GitHub -> release-assets -> S3)
+            while (true) {
+                val url = URL(currentUrl)
+                connection = url.openConnection() as HttpURLConnection
+                connection.instanceFollowRedirects = true
+                connection.connectTimeout = 15000
+                connection.readTimeout = 30000
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; AppLock-Updater)")
+
+                val status = connection.responseCode
+                if (status in 300..399) {
+                    val location = connection.getHeaderField("Location")
+                    if (!location.isNullOrEmpty() && redirectCount < 5) {
+                        currentUrl = location
+                        redirectCount++
+                        continue
+                    }
+                }
+                break
             }
 
-            val fileLength = redirectConn.contentLength
-            val apkFile = File(context.cacheDir, "update.apk")
+            val fileLength = connection.contentLength
+            val downloadDir = context.getExternalFilesDir(null) ?: context.cacheDir
+            val apkFile = File(downloadDir, "update.apk")
             if (apkFile.exists()) apkFile.delete()
 
-            redirectConn.inputStream.use { input ->
+            connection.inputStream.use { input ->
                 FileOutputStream(apkFile).use { output ->
                     val buffer = ByteArray(8192)
                     var total: Long = 0
@@ -160,7 +173,16 @@ class AppUpdateManager(private val context: Context) {
                 }
             }
 
-            // Save the published date and release name so we know this version was installed
+            // Verify downloaded APK size is realistic (> 1 MB) to prevent trying to install empty or HTML files
+            if (apkFile.length() < 1000000) {
+                _updateState.value = UpdateState.Error("Downloaded APK is invalid or incomplete (${apkFile.length()} bytes)")
+                return@withContext
+            }
+
+            // Ensure world-readable for system package installer
+            apkFile.setReadable(true, false)
+
+            // Save the published date and release name
             prefs.edit()
                 .putString(KEY_LAST_KNOWN_RELEASE_DATE, info.publishedAt)
                 .putString(KEY_LAST_KNOWN_RELEASE_NAME, info.releaseName)
@@ -168,7 +190,7 @@ class AppUpdateManager(private val context: Context) {
 
             _updateState.value = UpdateState.ReadyToInstall(apkFile)
 
-            // Trigger prompt
+            // Trigger prompt on main thread
             withContext(Dispatchers.Main) {
                 launchInstaller(apkFile)
             }
@@ -179,6 +201,11 @@ class AppUpdateManager(private val context: Context) {
 
     fun launchInstaller(apkFile: File) {
         try {
+            if (!apkFile.exists() || apkFile.length() < 1000000) {
+                _updateState.value = UpdateState.Error("APK file is missing or corrupted. Please tap to re-download.")
+                return
+            }
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 if (!context.packageManager.canRequestPackageInstalls()) {
                     val settingsIntent = Intent(
@@ -200,7 +227,19 @@ class AppUpdateManager(private val context: Context) {
 
             val installIntent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(apkUri, "application/vnd.android.package-archive")
-                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+
+            // Explicitly grant read URI permission to all potential installer handlers
+            val resInfoList = context.packageManager.queryIntentActivities(
+                installIntent,
+                android.content.pm.PackageManager.MATCH_DEFAULT_ONLY
+            )
+            for (resolveInfo in resInfoList) {
+                val pkgName = resolveInfo.activityInfo.packageName
+                context.grantUriPermission(pkgName, apkUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
 
             context.startActivity(installIntent)
