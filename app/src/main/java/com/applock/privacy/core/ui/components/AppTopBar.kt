@@ -35,7 +35,7 @@ import com.applock.privacy.core.ui.theme.TextPrimary
 fun AppTopBar(
     title: String,
     modifier: Modifier = Modifier,
-    showLogo: Boolean = true,
+    showLogo: Boolean = false,
     onNavigateBack: (() -> Unit)? = null,
     actions: @Composable () -> Unit = {}
 ) {

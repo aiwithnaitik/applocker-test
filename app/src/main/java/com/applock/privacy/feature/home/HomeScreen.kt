@@ -201,7 +201,8 @@ fun HomeScreen(
             .padding(horizontal = 16.dp)
     ) {
         AppTopBar(
-            title = "AppLock"
+            title = "AppLock",
+            showLogo = true
         )
 
         LazyColumn(
