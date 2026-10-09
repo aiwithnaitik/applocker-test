@@ -9,11 +9,18 @@ object AppLockSession {
 
     private val unlockedPackages = Collections.synchronizedSet(mutableSetOf<String>())
     @Volatile var isLockActivityShowing: Boolean = false
+    @Volatile var currentLockShowingPackage: String? = null
     @Volatile var activeUnlockedPackage: String? = null
+
+    fun setLockActivityShowing(showing: Boolean, packageName: String? = null) {
+        isLockActivityShowing = showing
+        currentLockShowingPackage = if (showing) packageName else null
+    }
 
     fun unlockPackage(packageName: String) {
         unlockedPackages.add(packageName)
         activeUnlockedPackage = packageName
+        setLockActivityShowing(false, null)
     }
 
     fun isPackageUnlocked(packageName: String): Boolean {
@@ -43,5 +50,7 @@ object AppLockSession {
     fun clearSession() {
         unlockedPackages.clear()
         activeUnlockedPackage = null
+        isLockActivityShowing = false
+        currentLockShowingPackage = null
     }
 }

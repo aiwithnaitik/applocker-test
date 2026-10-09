@@ -67,6 +67,7 @@ import com.applock.privacy.feature.auth.PinDotsIndicator
 import com.applock.privacy.feature.auth.PinKeypad
 import com.applock.privacy.feature.intruder.IntruderCaptureManager
 import kotlinx.coroutines.delay
+import android.view.WindowManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -78,35 +79,42 @@ class LockActivity : FragmentActivity() {
         fun start(context: Context, packageName: String) {
             val intent = Intent(context, LockActivity::class.java).apply {
                 putExtra(EXTRA_PACKAGE_NAME, packageName)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                    Intent.FLAG_ACTIVITY_NO_ANIMATION
             }
             context.startActivity(intent)
         }
     }
 
     private var targetPackage: String = ""
+    private var isUnlockedSuccessfully: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Prevent screenshots, screen recording, and recents thumbnail preview leakage
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE
+        )
         enableEdgeToEdge()
-        AppLockSession.isLockActivityShowing = true
 
         targetPackage = intent.getStringExtra(EXTRA_PACKAGE_NAME) ?: ""
+        AppLockSession.setLockActivityShowing(true, targetPackage)
 
-        // Prevent bypass via system back button by routing to Android launcher home
+        // Prevent bypass via system back button by routing directly to Android launcher home
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 val homeIntent = Intent(Intent.ACTION_MAIN).apply {
                     addCategory(Intent.CATEGORY_HOME)
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 }
                 startActivity(homeIntent)
                 AppLockSession.clearSession()
-                AppLockSession.isLockActivityShowing = false
-                finish()
+                finishAndRemoveTask()
             }
         })
-
 
         val preferencesDataSource = AppPreferencesDataSource(this)
         val packageManager = packageManager
@@ -161,9 +169,9 @@ class LockActivity : FragmentActivity() {
                         com.applock.privacy.feature.disguise.DisguiseMode.CALCULATOR -> {
                             com.applock.privacy.feature.disguise.CalculatorDecoyCover(
                                 onBypass = {
+                                    isUnlockedSuccessfully = true
                                     AlarmPlayer.stop()
                                     AppLockSession.unlockPackage(targetPackage)
-                                    AppLockSession.isLockActivityShowing = false
                                     finish()
                                 },
                                 onVerifyPin = { typedPin ->
@@ -188,9 +196,9 @@ class LockActivity : FragmentActivity() {
                         lockoutUntilTimestamp = lockoutUntil,
                         preferencesDataSource = preferencesDataSource,
                         onUnlockSuccess = {
+                            isUnlockedSuccessfully = true
                             AlarmPlayer.stop()
                             AppLockSession.unlockPackage(targetPackage)
-                            AppLockSession.isLockActivityShowing = false
                             finish()
                         },
                         activity = this
@@ -200,11 +208,42 @@ class LockActivity : FragmentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val newPackage = intent.getStringExtra(EXTRA_PACKAGE_NAME) ?: ""
+        if (newPackage.isNotEmpty() && newPackage != targetPackage) {
+            targetPackage = newPackage
+            isUnlockedSuccessfully = false
+            AppLockSession.setLockActivityShowing(true, targetPackage)
+            recreate()
+        }
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        // If user pressed Home or Recents to bypass, immediately terminate session
+        if (!isUnlockedSuccessfully) {
+            AppLockSession.clearSession()
+            finishAndRemoveTask()
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // If lock screen is obscured without unlocking, clear and finish immediately
+        if (!isUnlockedSuccessfully) {
+            AppLockSession.clearSession()
+            finishAndRemoveTask()
+        }
+    }
 
     override fun onDestroy() {
         super.onDestroy()
         AlarmPlayer.stop()
-        AppLockSession.isLockActivityShowing = false
+        if (!isUnlockedSuccessfully) {
+            AppLockSession.clearSession()
+        }
     }
 }
 

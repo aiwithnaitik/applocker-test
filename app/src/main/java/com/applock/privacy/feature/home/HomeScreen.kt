@@ -9,6 +9,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -81,6 +95,7 @@ import com.applock.privacy.data.local.AppPreferencesDataSource
 import com.applock.privacy.data.model.AppInfo
 import com.applock.privacy.data.repository.AppDiscoveryRepository
 import com.applock.privacy.feature.auth.PinSetupDialog
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -111,6 +126,7 @@ fun HomeScreen(
     var selectedFilter by remember { mutableStateOf(AppFilterTab.UNLOCKED) }
     var showPinSetupDialog by remember { mutableStateOf(false) }
     var pendingLockPackage by remember { mutableStateOf<String?>(null) }
+    var animatingOutPackages by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     // Re-check permissions and restart monitor service if needed on resume
     DisposableEffect(lifecycleOwner) {
@@ -348,31 +364,64 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.height(6.dp))
                 }
 
-                // 2-Way Segmented Toggle for Unlocked & Locked
+                // 2-Way Segmented Toggle for Unlocked & Locked with Smooth Spring Slider Animation
                 val lockedCount = lockedPackages.size
                 val unlockedCount = (installedApps.size - lockedCount).coerceAtLeast(0)
 
-                Box(
+                BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(46.dp)
+                        .height(48.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .background(SurfaceCard)
                         .border(1.dp, BorderSubtle, RoundedCornerShape(14.dp))
                         .padding(4.dp)
                 ) {
+                    val tabWidth = maxWidth / 2
+
+                    val indicatorOffset by animateDpAsState(
+                        targetValue = if (selectedFilter == AppFilterTab.UNLOCKED) 0.dp else tabWidth,
+                        animationSpec = spring(
+                            dampingRatio = 0.82f,
+                            stiffness = Spring.StiffnessMediumLow
+                        ),
+                        label = "TogglePillOffset"
+                    )
+
+                    val unlockedContentColor by animateColorAsState(
+                        targetValue = if (selectedFilter == AppFilterTab.UNLOCKED) Color(0xFF0A0F1D) else TextSecondary,
+                        animationSpec = tween(200),
+                        label = "UnlockedColor"
+                    )
+                    val lockedContentColor by animateColorAsState(
+                        targetValue = if (selectedFilter == AppFilterTab.LOCKED) Color(0xFF0A0F1D) else TextSecondary,
+                        animationSpec = tween(200),
+                        label = "LockedColor"
+                    )
+
+                    // Sliding Pill Indicator
+                    Box(
+                        modifier = Modifier
+                            .offset(x = indicatorOffset)
+                            .width(tabWidth)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(ElectricCyan)
+                    )
+
                     Row(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        // Unlocked Tab (Default)
+                        // Unlocked Tab
                         Box(
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(if (selectedFilter == AppFilterTab.UNLOCKED) ElectricCyan else Color.Transparent)
-                                .clickable { selectedFilter = AppFilterTab.UNLOCKED },
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { selectedFilter = AppFilterTab.UNLOCKED },
                             contentAlignment = Alignment.Center
                         ) {
                             Row(
@@ -382,7 +431,7 @@ fun HomeScreen(
                                 Icon(
                                     imageVector = Icons.Default.LockOpen,
                                     contentDescription = null,
-                                    tint = if (selectedFilter == AppFilterTab.UNLOCKED) Color(0xFF0A0F1D) else TextMuted,
+                                    tint = unlockedContentColor,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
@@ -390,7 +439,7 @@ fun HomeScreen(
                                     text = "Unlocked ($unlockedCount)",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = if (selectedFilter == AppFilterTab.UNLOCKED) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (selectedFilter == AppFilterTab.UNLOCKED) Color(0xFF0A0F1D) else TextSecondary,
+                                    color = unlockedContentColor,
                                     fontSize = 13.sp
                                 )
                             }
@@ -402,8 +451,10 @@ fun HomeScreen(
                                 .weight(1f)
                                 .fillMaxHeight()
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(if (selectedFilter == AppFilterTab.LOCKED) ElectricCyan else Color.Transparent)
-                                .clickable { selectedFilter = AppFilterTab.LOCKED },
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { selectedFilter = AppFilterTab.LOCKED },
                             contentAlignment = Alignment.Center
                         ) {
                             Row(
@@ -413,7 +464,7 @@ fun HomeScreen(
                                 Icon(
                                     imageVector = Icons.Default.Lock,
                                     contentDescription = null,
-                                    tint = if (selectedFilter == AppFilterTab.LOCKED) Color(0xFF0A0F1D) else TextMuted,
+                                    tint = lockedContentColor,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
@@ -421,7 +472,7 @@ fun HomeScreen(
                                     text = "Locked ($lockedCount)",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = if (selectedFilter == AppFilterTab.LOCKED) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (selectedFilter == AppFilterTab.LOCKED) Color(0xFF0A0F1D) else TextSecondary,
+                                    color = lockedContentColor,
                                     fontSize = 13.sp
                                 )
                             }
@@ -526,26 +577,40 @@ fun HomeScreen(
             } else {
                 items(filteredApps, key = { it.packageName }) { app ->
                     val isLocked = lockedPackages.contains(app.packageName)
+                    val isExiting = animatingOutPackages.contains(app.packageName)
 
-                    AppListItem(
-                        app = app,
-                        isLocked = isLocked,
-                        onToggleLock = {
-                            coroutineScope.launch {
-                                val hasPin = preferencesDataSource.hasPinConfiguredFlow.first()
-                                if (!hasPin && !isLocked) {
-                                    // Needs PIN setup first!
-                                    pendingLockPackage = app.packageName
-                                    showPinSetupDialog = true
-                                } else {
-                                    preferencesDataSource.setPackageLocked(app.packageName, !isLocked)
-                                    if (!isLocked && permissionStatus.isCorePermissionsGranted) {
-                                        AppMonitorService.start(context)
+                    AnimatedVisibility(
+                        visible = !isExiting,
+                        enter = fadeIn(animationSpec = tween(180)),
+                        exit = slideOutHorizontally(
+                            targetOffsetX = { fullWidth -> if (isLocked) -fullWidth else fullWidth },
+                            animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing)
+                        ) + fadeOut(animationSpec = tween(220)) + shrinkVertically(animationSpec = tween(280)),
+                        modifier = Modifier.animateItem()
+                    ) {
+                        AppListItem(
+                            app = app,
+                            isLocked = isLocked,
+                            onToggleLock = {
+                                coroutineScope.launch {
+                                    val hasPin = preferencesDataSource.hasPinConfiguredFlow.first()
+                                    if (!hasPin && !isLocked) {
+                                        // Needs PIN setup first!
+                                        pendingLockPackage = app.packageName
+                                        showPinSetupDialog = true
+                                    } else {
+                                        animatingOutPackages = animatingOutPackages + app.packageName
+                                        delay(260)
+                                        preferencesDataSource.setPackageLocked(app.packageName, !isLocked)
+                                        if (!isLocked && permissionStatus.isCorePermissionsGranted) {
+                                            AppMonitorService.start(context)
+                                        }
+                                        animatingOutPackages = animatingOutPackages - app.packageName
                                     }
                                 }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
 

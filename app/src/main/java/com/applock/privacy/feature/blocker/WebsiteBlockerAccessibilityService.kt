@@ -5,6 +5,8 @@ import android.content.Intent
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import com.applock.privacy.core.monitoring.AppLockSession
+import com.applock.privacy.feature.lock.LockActivity
 import com.applock.privacy.data.local.AppPreferencesDataSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,9 +19,25 @@ class WebsiteBlockerAccessibilityService : AccessibilityService() {
     private lateinit var preferencesDataSource: AppPreferencesDataSource
     private var lastBlockedTimestamp = 0L
 
+    @Volatile
+    private var cachedIsMonitorActive = true
+
+    @Volatile
+    private var cachedLockedPackages: Set<String> = emptySet()
+
     override fun onCreate() {
         super.onCreate()
         preferencesDataSource = AppPreferencesDataSource(applicationContext)
+        serviceScope.launch {
+            preferencesDataSource.isAppMonitorActiveFlow.collect { active ->
+                cachedIsMonitorActive = active
+            }
+        }
+        serviceScope.launch {
+            preferencesDataSource.lockedPackagesFlow.collect { locked ->
+                cachedLockedPackages = locked
+            }
+        }
         Log.i(TAG, "WebsiteBlockerAccessibilityService created")
     }
 
@@ -27,6 +45,24 @@ class WebsiteBlockerAccessibilityService : AccessibilityService() {
         if (event == null) return
 
         val packageName = event.packageName?.toString() ?: return
+
+        // 1. Instant Zero-Latency App Lock Interception (Hardware-speed OS window event)
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            AppLockSession.onForegroundPackageChanged(packageName)
+
+            if (packageName != applicationContext.packageName && cachedIsMonitorActive) {
+                if (cachedLockedPackages.contains(packageName)) {
+                    val isUnlocked = AppLockSession.isPackageUnlocked(packageName)
+                    val currentShowing = AppLockSession.currentLockShowingPackage
+                    if (!isUnlocked && currentShowing != packageName) {
+                        AppLockSession.setLockActivityShowing(true, packageName)
+                        LockActivity.start(applicationContext, packageName)
+                    }
+                }
+            }
+        }
+
+        // 2. Browser Inspection for Website Blocker
         if (!SUPPORTED_BROWSERS.contains(packageName)) return
 
         val now = System.currentTimeMillis()

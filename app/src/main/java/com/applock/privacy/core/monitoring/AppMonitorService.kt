@@ -13,6 +13,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.app.AlarmManager
+import android.os.SystemClock
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.applock.privacy.MainActivity
@@ -75,6 +77,24 @@ class AppMonitorService : Service() {
         return START_STICKY
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        // Anti-Kill Watchdog: If user swipes AppLock away from Recents or task killer intervenes, revive immediately
+        val restartServiceIntent = Intent(applicationContext, AppMonitorService::class.java).also {
+            it.setPackage(packageName)
+        }
+        val restartPendingIntent = PendingIntent.getService(
+            this, 101, restartServiceIntent,
+            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+        alarmManager?.set(
+            AlarmManager.ELAPSED_REALTIME,
+            SystemClock.elapsedRealtime() + 500,
+            restartPendingIntent
+        )
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
@@ -132,7 +152,6 @@ class AppMonitorService : Service() {
     }
 
     private fun observePreferencesHotState() {
-
         serviceScope.launch {
             preferencesDataSource.isAppMonitorActiveFlow.collect { enabled ->
                 cachedIsMonitorEnabled = enabled
@@ -173,14 +192,13 @@ class AppMonitorService : Service() {
             var lastObservedPackage: String? = null
 
             while (isActive) {
-                // Phase 24 Optimization: Screen-Off Battery Saver
-                // Completely pause active polling while screen is dark/idle
+                // Pause active polling while screen is dark/idle to save battery
                 if (!isScreenOn) {
-                    delay(1500)
+                    delay(1200)
                     continue
                 }
 
-                var nextDelay = 300L
+                var nextDelay = 90L
 
                 try {
                     val hasUsagePermission = PermissionManager.hasUsageStatsPermission(this@AppMonitorService)
@@ -199,20 +217,21 @@ class AppMonitorService : Service() {
                                 locked.contains(foregroundPackage)
                             ) {
                                 val isAlreadyUnlocked = AppLockSession.isPackageUnlocked(foregroundPackage)
-                                val isLockShowing = AppLockSession.isLockActivityShowing
+                                val currentShowing = AppLockSession.currentLockShowingPackage
 
-                                if (!isAlreadyUnlocked && !isLockShowing) {
+                                if (!isAlreadyUnlocked && currentShowing != foregroundPackage) {
+                                    AppLockSession.setLockActivityShowing(true, foregroundPackage)
                                     LockActivity.start(this@AppMonitorService, foregroundPackage)
-                                    nextDelay = 150L // Tight polling during intercept
+                                    nextDelay = 60L // Ultra-tight loop while intercepting
                                 }
                             }
 
-                            // Adaptive rate: if user stays on the same package, relax delay to 350ms
+                            // Dynamic high-speed responsiveness
                             if (foregroundPackage == lastObservedPackage) {
-                                nextDelay = 350L
+                                nextDelay = 110L
                             } else {
                                 lastObservedPackage = foregroundPackage
-                                nextDelay = 180L
+                                nextDelay = 80L
                             }
                         }
                     }
