@@ -25,9 +25,13 @@ class WebsiteBlockerAccessibilityService : AccessibilityService() {
     @Volatile
     private var cachedLockedPackages: Set<String> = emptySet()
 
+    @Volatile
+    private var cachedLauncherPackages: Set<String> = emptySet()
+
     override fun onCreate() {
         super.onCreate()
         preferencesDataSource = AppPreferencesDataSource(applicationContext)
+        cachedLauncherPackages = AppLockSession.getInstalledLauncherPackages(packageManager)
         serviceScope.launch {
             preferencesDataSource.isAppMonitorActiveFlow.collect { active ->
                 cachedIsMonitorActive = active
@@ -48,14 +52,28 @@ class WebsiteBlockerAccessibilityService : AccessibilityService() {
 
         // 1. Instant Zero-Latency App Lock Interception (Hardware-speed OS window event)
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            val active = AppLockSession.activeUnlockedPackage
-            if (active != null && packageName != active && packageName != applicationContext.packageName) {
-                AppLockSession.clearSession()
-            } else {
-                AppLockSession.onForegroundPackageChanged(packageName)
+            val isGrace = AppLockSession.isGracePeriodActive()
+
+            if (!isGrace) {
+                if (AppLockSession.isSystemOrTransientPackage(packageName, applicationContext.packageName)) {
+                    // Ignore transient system UI and keyboards
+                } else if (cachedLauncherPackages.contains(packageName)) {
+                    // User went to Home launcher or Recents overview
+                    AppLockSession.clearSession()
+                } else {
+                    AppLockSession.onForegroundPackageChanged(
+                        newForegroundPackage = packageName,
+                        launcherPackages = cachedLauncherPackages,
+                        ownPackageName = applicationContext.packageName
+                    )
+                }
             }
 
-            if (packageName != applicationContext.packageName && cachedIsMonitorActive) {
+            if (packageName != applicationContext.packageName &&
+                !AppLockSession.isSystemOrTransientPackage(packageName, applicationContext.packageName) &&
+                !cachedLauncherPackages.contains(packageName) &&
+                cachedIsMonitorActive
+            ) {
                 if (cachedLockedPackages.contains(packageName)) {
                     val isUnlocked = AppLockSession.isPackageUnlocked(packageName)
                     val currentShowing = AppLockSession.currentLockShowingPackage

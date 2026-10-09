@@ -77,6 +77,9 @@ class LockActivity : FragmentActivity() {
         const val EXTRA_PACKAGE_NAME = "extra_target_package_name"
 
         fun start(context: Context, packageName: String) {
+            if (AppLockSession.isPackageUnlocked(packageName)) {
+                return
+            }
             val intent = Intent(context, LockActivity::class.java).apply {
                 putExtra(EXTRA_PACKAGE_NAME, packageName)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or
@@ -101,6 +104,10 @@ class LockActivity : FragmentActivity() {
         enableEdgeToEdge()
 
         targetPackage = intent.getStringExtra(EXTRA_PACKAGE_NAME) ?: ""
+        if (targetPackage.isEmpty() || AppLockSession.isPackageUnlocked(targetPackage)) {
+            finish()
+            return
+        }
         AppLockSession.setLockActivityShowing(true, targetPackage)
 
         // Prevent bypass via system back button by routing directly to Android launcher home
@@ -213,6 +220,10 @@ class LockActivity : FragmentActivity() {
         setIntent(intent)
         val newPackage = intent.getStringExtra(EXTRA_PACKAGE_NAME) ?: ""
         if (newPackage.isNotEmpty() && newPackage != targetPackage) {
+            if (AppLockSession.isPackageUnlocked(newPackage)) {
+                finish()
+                return
+            }
             targetPackage = newPackage
             isUnlockedSuccessfully = false
             AppLockSession.setLockActivityShowing(true, targetPackage)

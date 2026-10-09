@@ -192,9 +192,7 @@ class AppMonitorService : Service() {
         serviceScope.launch {
             val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
             val packageManager = packageManager
-            val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-            val resolveInfo = packageManager.resolveActivity(homeIntent, PackageManager.MATCH_DEFAULT_ONLY)
-            val launcherPackage = resolveInfo?.activityInfo?.packageName
+            val launcherPackages = AppLockSession.getInstalledLauncherPackages(packageManager)
             var lastObservedPackage: String? = null
 
             while (isActive) {
@@ -214,25 +212,32 @@ class AppMonitorService : Service() {
 
                         if (locked.isNotEmpty()) {
                             val activePackage = AppLockSession.activeUnlockedPackage
-                            val state = inspectForegroundState(usageStatsManager, activePackage, launcherPackage)
+                            val isGrace = AppLockSession.isGracePeriodActive()
+                            val state = inspectForegroundState(
+                                usageStatsManager = usageStatsManager,
+                                activeUnlockedPackage = activePackage,
+                                launcherPackages = launcherPackages,
+                                lastUnlockTimestamp = AppLockSession.lastUnlockTimestamp,
+                                isGracePeriod = isGrace
+                            )
 
                             // 1. Immediate Relock: If user exited the unlocked app (pressed Home, opened Recents tabs, locked screen)
-                            if (state.isTargetAppBackgrounded) {
+                            if (!isGrace && state.isTargetAppBackgrounded) {
                                 AppLockSession.clearSession()
                             }
 
                             val foregroundPackage = state.foregroundPackage
 
-                            // 2. If user is currently on home launcher or systemui
-                            if (foregroundPackage != null && (foregroundPackage == launcherPackage || foregroundPackage == "com.android.systemui")) {
+                            // 2. If user is currently on home launcher
+                            if (!isGrace && foregroundPackage != null && launcherPackages.contains(foregroundPackage)) {
                                 AppLockSession.clearSession()
                             }
 
                             // 3. Intercept protected application
                             if (foregroundPackage != null &&
                                 foregroundPackage != packageName &&
-                                foregroundPackage != launcherPackage &&
-                                foregroundPackage != "com.android.systemui" &&
+                                !launcherPackages.contains(foregroundPackage) &&
+                                !AppLockSession.isSystemOrTransientPackage(foregroundPackage, packageName) &&
                                 locked.contains(foregroundPackage)
                             ) {
                                 val isAlreadyUnlocked = AppLockSession.isPackageUnlocked(foregroundPackage)
@@ -269,8 +274,17 @@ class AppMonitorService : Service() {
     private fun inspectForegroundState(
         usageStatsManager: UsageStatsManager,
         activeUnlockedPackage: String?,
-        launcherPackage: String?
+        launcherPackages: Set<String>,
+        lastUnlockTimestamp: Long,
+        isGracePeriod: Boolean
     ): MonitoringState {
+        if (isGracePeriod) {
+            return MonitoringState(
+                foregroundPackage = activeUnlockedPackage,
+                isTargetAppBackgrounded = false
+            )
+        }
+
         val now = System.currentTimeMillis()
         val events = usageStatsManager.queryEvents(now - 3500, now)
         val event = UsageEvents.Event()
@@ -278,8 +292,10 @@ class AppMonitorService : Service() {
         var latestResumedPkg: String? = null
         var latestResumedTime: Long = 0L
 
-        var activePkgLastPausedOrStoppedTime: Long = 0L
-        var activePkgLastResumedTime: Long = 0L
+        var activePkgPostUnlockPausedOrStoppedTime: Long = 0L
+        var activePkgPostUnlockResumedTime: Long = 0L
+
+        val validPostUnlockThreshold = lastUnlockTimestamp + 600L
 
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
@@ -292,23 +308,26 @@ class AppMonitorService : Service() {
                         latestResumedTime = time
                         latestResumedPkg = pkg
                     }
-                    if (pkg == activeUnlockedPackage && time >= activePkgLastResumedTime) {
-                        activePkgLastResumedTime = time
+                    if (pkg == activeUnlockedPackage && time >= validPostUnlockThreshold && time >= activePkgPostUnlockResumedTime) {
+                        activePkgPostUnlockResumedTime = time
                     }
                 }
                 UsageEvents.Event.ACTIVITY_PAUSED,
                 UsageEvents.Event.ACTIVITY_STOPPED -> {
-                    if (pkg == activeUnlockedPackage && time >= activePkgLastPausedOrStoppedTime) {
-                        activePkgLastPausedOrStoppedTime = time
+                    if (pkg == activeUnlockedPackage && time >= validPostUnlockThreshold && time >= activePkgPostUnlockPausedOrStoppedTime) {
+                        activePkgPostUnlockPausedOrStoppedTime = time
                     }
                 }
             }
         }
 
         // If the active unlocked package was paused or stopped after its last resumed time, it is backgrounded!
-        val isBackgrounded = if (activeUnlockedPackage != null) {
-            (activePkgLastPausedOrStoppedTime > activePkgLastResumedTime) ||
-            (latestResumedPkg != null && latestResumedPkg != activeUnlockedPackage && latestResumedPkg != packageName)
+        val isBackgrounded = if (activeUnlockedPackage != null && !isGracePeriod) {
+            (activePkgPostUnlockPausedOrStoppedTime > activePkgPostUnlockResumedTime && activePkgPostUnlockPausedOrStoppedTime > 0L) ||
+            (latestResumedPkg != null &&
+             !AppLockSession.isSystemOrTransientPackage(latestResumedPkg, packageName) &&
+             latestResumedPkg != activeUnlockedPackage &&
+             latestResumedPkg != packageName)
         } else {
             false
         }
