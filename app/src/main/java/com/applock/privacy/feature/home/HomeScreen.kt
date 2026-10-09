@@ -133,7 +133,10 @@ fun HomeScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 permissionStatus = PermissionManager.getPermissionStatus(context)
-                if (permissionStatus.isCorePermissionsGranted && isAppMonitorActive) {
+                if (permissionStatus.isCorePermissionsGranted) {
+                    coroutineScope.launch {
+                        preferencesDataSource.setAppMonitorActive(true)
+                    }
                     AppMonitorService.start(context)
                 }
             }
@@ -593,17 +596,20 @@ fun HomeScreen(
                             isLocked = isLocked,
                             onToggleLock = {
                                 coroutineScope.launch {
-                                    val hasPin = preferencesDataSource.hasPinConfiguredFlow.first()
-                                    if (!hasPin && !isLocked) {
-                                        // Needs PIN setup first!
+                                    val hasSecurity = preferencesDataSource.hasSecurityConfiguredFlow.first()
+                                    if (!hasSecurity && !isLocked) {
+                                        // Needs PIN/Pattern setup first!
                                         pendingLockPackage = app.packageName
                                         showPinSetupDialog = true
                                     } else {
                                         animatingOutPackages = animatingOutPackages + app.packageName
                                         delay(260)
                                         preferencesDataSource.setPackageLocked(app.packageName, !isLocked)
-                                        if (!isLocked && permissionStatus.isCorePermissionsGranted) {
-                                            AppMonitorService.start(context)
+                                        if (!isLocked) {
+                                            preferencesDataSource.setAppMonitorActive(true)
+                                            if (permissionStatus.isCorePermissionsGranted) {
+                                                AppMonitorService.start(context)
+                                            }
                                         }
                                         animatingOutPackages = animatingOutPackages - app.packageName
                                     }

@@ -26,17 +26,10 @@ data class PermissionStatus(
 
 object PermissionManager {
 
-    @Volatile var isMockUngrantedOverride: Boolean = false
-
-    fun setMockUngranted(ungranted: Boolean) {
-        isMockUngrantedOverride = ungranted
-    }
-
     /**
      * Checks if Usage Stats permission has been granted via Android AppOps.
      */
     fun hasUsageStatsPermission(context: Context): Boolean {
-        if (isMockUngrantedOverride) return false
         val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager ?: return false
         val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             appOps.unsafeCheckOpNoThrow(
@@ -59,7 +52,6 @@ object PermissionManager {
      * Checks if Display Over Other Apps (Overlay) permission is granted.
      */
     fun hasOverlayPermission(context: Context): Boolean {
-        if (isMockUngrantedOverride) return false
         return Settings.canDrawOverlays(context)
     }
 
@@ -67,7 +59,6 @@ object PermissionManager {
      * Checks if AppLock is excluded from battery optimization / doze restrictions.
      */
     fun isIgnoringBatteryOptimizations(context: Context): Boolean {
-        if (isMockUngrantedOverride) return false
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return false
         return powerManager.isIgnoringBatteryOptimizations(context.packageName)
     }
@@ -76,7 +67,6 @@ object PermissionManager {
      * Checks notification posting permission (required on Android 13+).
      */
     fun hasNotificationPermission(context: Context): Boolean {
-        if (isMockUngrantedOverride) return false
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ContextCompat.checkSelfPermission(
                 context,
@@ -91,14 +81,6 @@ object PermissionManager {
      * Aggregated permission status check.
      */
     fun getPermissionStatus(context: Context): PermissionStatus {
-        if (isMockUngrantedOverride) {
-            return PermissionStatus(
-                hasUsageAccess = false,
-                hasOverlay = false,
-                isBatteryOptimizedIgnored = false,
-                hasNotification = false
-            )
-        }
         return PermissionStatus(
             hasUsageAccess = hasUsageStatsPermission(context),
             hasOverlay = hasOverlayPermission(context),
@@ -183,7 +165,6 @@ object PermissionManager {
      * Checks if Notification Listener Service access is granted.
      */
     fun isNotificationListenerGranted(context: Context): Boolean {
-        if (isMockUngrantedOverride) return false
         return try {
             androidx.core.app.NotificationManagerCompat.getEnabledListenerPackages(context)
                 .contains(context.packageName)
@@ -208,7 +189,6 @@ object PermissionManager {
      * Checks if Website Blocker Accessibility Service is currently enabled.
      */
     fun isAccessibilityServiceEnabled(context: Context): Boolean {
-        if (isMockUngrantedOverride) return false
         return try {
             val enabledServices = Settings.Secure.getString(
                 context.contentResolver,

@@ -228,9 +228,13 @@ class AppMonitorService : Service() {
 
                             val foregroundPackage = state.foregroundPackage
 
-                            // 2. If user is currently on home launcher
-                            if (!isGrace && foregroundPackage != null && launcherPackages.contains(foregroundPackage)) {
-                                AppLockSession.clearSession()
+                            // 2. If user is currently on home launcher or switched to another app
+                            if (!isGrace && foregroundPackage != null) {
+                                if (launcherPackages.contains(foregroundPackage)) {
+                                    AppLockSession.clearSession()
+                                } else {
+                                    AppLockSession.onForegroundPackageChanged(foregroundPackage, launcherPackages, packageName)
+                                }
                             }
 
                             // 3. Intercept protected application
@@ -286,7 +290,7 @@ class AppMonitorService : Service() {
         }
 
         val now = System.currentTimeMillis()
-        val events = usageStatsManager.queryEvents(now - 3500, now)
+        val events = usageStatsManager.queryEvents(now - 8000, now)
         val event = UsageEvents.Event()
 
         var latestResumedPkg: String? = null
@@ -333,7 +337,7 @@ class AppMonitorService : Service() {
         }
 
         val finalForeground = latestResumedPkg ?: run {
-            val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, now - 5000, now)
+            val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, now - 1000L * 60 * 60 * 24, now)
             stats?.maxByOrNull { it.lastTimeUsed }?.packageName
         }
 

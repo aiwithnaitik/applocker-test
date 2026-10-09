@@ -36,7 +36,6 @@ class AppPreferencesDataSource(private val context: Context) {
         val KEY_LOCK_TYPE = stringPreferencesKey("lock_type") // "pin" or "pattern"
         val KEY_SELECTED_THEME_ID = stringPreferencesKey("selected_theme_id")
         val KEY_APP_MONITOR_ACTIVE = booleanPreferencesKey("app_monitor_active")
-        val KEY_FORCE_PERMISSIONS_UNGRANTED = booleanPreferencesKey("force_permissions_ungranted")
 
         // Phase 12 & 13: Themes & Monetization
         val KEY_CUSTOM_THEMES_JSON = stringPreferencesKey("custom_themes_json")
@@ -104,16 +103,16 @@ class AppPreferencesDataSource(private val context: Context) {
         !preferences[KEY_PATTERN_HASH].isNullOrEmpty()
     }
 
+    val hasSecurityConfiguredFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        !preferences[KEY_PIN_HASH].isNullOrEmpty() || !preferences[KEY_PATTERN_HASH].isNullOrEmpty()
+    }
+
     val lockTypeFlow: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[KEY_LOCK_TYPE] ?: "pin"
     }
 
     val pinLengthFlow: Flow<Int> = context.dataStore.data.map { preferences ->
         preferences[KEY_PIN_LENGTH] ?: 4
-    }
-
-    val isForcePermissionsUngrantedFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[KEY_FORCE_PERMISSIONS_UNGRANTED] ?: false
     }
 
     val selectedThemeIdFlow: Flow<String> = context.dataStore.data.map { preferences ->
@@ -343,12 +342,6 @@ class AppPreferencesDataSource(private val context: Context) {
         }
     }
 
-    suspend fun setForcePermissionsUngranted(ungranted: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[KEY_FORCE_PERMISSIONS_UNGRANTED] = ungranted
-        }
-    }
-
     suspend fun clearAllLockedPackages() {
         context.dataStore.edit { preferences ->
             preferences.remove(KEY_LOCKED_PACKAGES)
@@ -359,14 +352,13 @@ class AppPreferencesDataSource(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences[KEY_ONBOARDING_COMPLETED] = false
             preferences.remove(KEY_ONBOARDING_REASON)
-            preferences[KEY_FORCE_PERMISSIONS_UNGRANTED] = true
             preferences.remove(KEY_LOCKED_PACKAGES)
             preferences.remove(KEY_PIN_HASH)
             preferences.remove(KEY_PIN_SALT)
             preferences.remove(KEY_PATTERN_HASH)
             preferences.remove(KEY_PATTERN_SALT)
             preferences[KEY_PIN_LENGTH] = 4
-            preferences[KEY_APP_MONITOR_ACTIVE] = false
+            preferences[KEY_APP_MONITOR_ACTIVE] = true
         }
     }
 

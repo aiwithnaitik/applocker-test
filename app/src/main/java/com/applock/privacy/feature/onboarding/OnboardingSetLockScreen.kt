@@ -37,12 +37,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.applock.privacy.R
+import com.applock.privacy.core.monitoring.AppMonitorService
+import com.applock.privacy.core.permission.PermissionManager
 import com.applock.privacy.core.security.SecurityManager
 import com.applock.privacy.core.theme.AppThemeCatalog
 import com.applock.privacy.core.ui.components.AppGradientButton
@@ -70,6 +73,7 @@ fun OnboardingSetLockScreen(
     preferencesDataSource: AppPreferencesDataSource,
     onNavigateToHome: () -> Unit
 ) {
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
 
@@ -145,6 +149,10 @@ fun OnboardingSetLockScreen(
                         .clickable {
                             coroutineScope.launch {
                                 preferencesDataSource.setOnboardingCompleted(true)
+                                preferencesDataSource.setAppMonitorActive(true)
+                                if (PermissionManager.hasUsageStatsPermission(context) && PermissionManager.hasOverlayPermission(context)) {
+                                    AppMonitorService.start(context)
+                                }
                                 onNavigateToHome()
                             }
                         }
@@ -461,6 +469,10 @@ fun OnboardingSetLockScreen(
                 onClick = {
                     coroutineScope.launch {
                         preferencesDataSource.setOnboardingCompleted(true)
+                        preferencesDataSource.setAppMonitorActive(true)
+                        if (PermissionManager.hasUsageStatsPermission(context) && PermissionManager.hasOverlayPermission(context)) {
+                            AppMonitorService.start(context)
+                        }
                         onNavigateToHome()
                     }
                 },
