@@ -15,16 +15,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Grid3x3
 import androidx.compose.material.icons.filled.Pin
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -76,7 +72,6 @@ fun OnboardingSetLockScreen(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
-    val scrollState = rememberScrollState()
 
     var selectedLockType by remember { mutableStateOf(LockTypeOption.PIN_4) }
     var isDropdownExpanded by remember { mutableStateOf(false) }
@@ -109,7 +104,7 @@ fun OnboardingSetLockScreen(
         statusMessage = when (selectedLockType) {
             LockTypeOption.PIN_4 -> "Enter a 4-digit PIN"
             LockTypeOption.PIN_6 -> "Enter a 6-digit PIN"
-            LockTypeOption.PATTERN -> "Draw a pattern (connect at least 4 dots)"
+            LockTypeOption.PATTERN -> "Draw a pattern (connect 4+ dots)"
         }
     }
 
@@ -117,118 +112,120 @@ fun OnboardingSetLockScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundDeep)
-            .padding(horizontal = 20.dp, vertical = 16.dp)
-            .verticalScroll(scrollState),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Step indicator as clean text
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        // ── TOP HEADER SECTION ──────────────────────────────────────────────
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxWidth()
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "3/3",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = ElectricCyan,
+                    fontSize = 15.sp
+                )
+
+                Text(
+                    text = "Set Later",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextMuted,
+                    fontSize = 13.sp,
+                    modifier = Modifier
+                        .clip(PillShape)
+                        .clickable {
+                            coroutineScope.launch {
+                                preferencesDataSource.setOnboardingCompleted(true)
+                                onNavigateToHome()
+                            }
+                        }
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
             Text(
-                text = "3/3",
-                style = MaterialTheme.typography.titleMedium,
+                text = "Set Lock",
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = ElectricCyan,
-                fontSize = 16.sp
+                color = TextPrimary
             )
 
             Text(
-                text = "Set Later",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
+                text = "Choose your lock type and configure your master passkey.",
+                style = MaterialTheme.typography.bodySmall,
                 color = TextMuted,
-                modifier = Modifier
-                    .clip(PillShape)
-                    .clickable {
-                        coroutineScope.launch {
-                            preferencesDataSource.setOnboardingCompleted(true)
-                            onNavigateToHome()
-                        }
-                    }
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                fontSize = 11.5.sp
             )
         }
 
-        Spacer(modifier = Modifier.height(18.dp))
-
-        Text(
-            text = "Set Lock",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = "Choose your lock type and configure your primary passkey.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextMuted,
-            fontSize = 13.sp
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // ══════════════════════════════════════════════════════════════════
-        // Live Preview Card — Explicitly styled in pure white app theme
-        // ══════════════════════════════════════════════════════════════════
+        // ── CENTER: PURE WHITE LIVE PREVIEW CARD ────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(26.dp))
+                .clip(RoundedCornerShape(22.dp))
                 .background(Color.White)
-                .border(1.5.dp, Color(0xFFE2E8F0), RoundedCornerShape(26.dp))
-                .padding(horizontal = 20.dp, vertical = 22.dp),
+                .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(22.dp))
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             contentAlignment = Alignment.Center
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // App Logo in pure white theme preview
-                Box(
-                    modifier = Modifier
-                        .size(54.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFFF1F5F9))
-                        .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(16.dp)),
-                    contentAlignment = Alignment.Center
+                // Symmetrical horizontal row: App Logo & Protected Title
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.app_logo),
-                        contentDescription = "AppLock",
-                        modifier = Modifier.size(40.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFFF1F5F9))
+                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(10.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.app_logo),
+                            contentDescription = "AppLock",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Column {
+                        Text(
+                            text = "AppLock",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0F172A),
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            text = "Protected by AppLock Shield",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF64748B),
+                            fontSize = 10.5.sp
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Text(
-                    text = "AppLock",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF0F172A)
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                Text(
-                    text = "Protected by AppLock Shield",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF64748B),
-                    fontSize = 12.sp
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // ──────────────────────────────────────────────────────────
-                // Dropdown Selector: Under "Protected by AppLock"
-                // Lets user choose between: 4-digit PIN, 6-digit PIN, Pattern
+                // Dropdown Selector: Under "Protected by AppLock Shield"
                 // ──────────────────────────────────────────────────────────
                 Box {
                     Row(
@@ -238,7 +235,7 @@ fun OnboardingSetLockScreen(
                             .background(Color(0xFFF1F5F9))
                             .border(1.dp, Color(0xFFCBD5E1), PillShape)
                             .clickable { isDropdownExpanded = true }
-                            .padding(horizontal = 14.dp, vertical = 7.dp)
+                            .padding(horizontal = 12.dp, vertical = 5.dp)
                     ) {
                         Icon(
                             imageVector = when (selectedLockType) {
@@ -247,21 +244,21 @@ fun OnboardingSetLockScreen(
                             },
                             contentDescription = null,
                             tint = Color(0xFF0284C7),
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = selectedLockType.title,
                             color = Color(0xFF0F172A),
                             fontWeight = FontWeight.Bold,
-                            fontSize = 12.5.sp
+                            fontSize = 12.sp
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
                             imageVector = Icons.Default.ArrowDropDown,
                             contentDescription = "Select Lock Type",
                             tint = Color(0xFF475569),
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                     }
 
@@ -283,14 +280,14 @@ fun OnboardingSetLockScreen(
                                             },
                                             contentDescription = null,
                                             tint = if (selectedLockType == option) Color(0xFF0284C7) else Color(0xFF64748B),
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(15.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
                                             text = option.title,
                                             color = if (selectedLockType == option) Color(0xFF0284C7) else Color(0xFF0F172A),
                                             fontWeight = if (selectedLockType == option) FontWeight.Bold else FontWeight.Medium,
-                                            fontSize = 13.sp
+                                            fontSize = 12.5.sp
                                         )
                                     }
                                 },
@@ -303,7 +300,7 @@ fun OnboardingSetLockScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 // Status Prompt
                 Text(
@@ -318,14 +315,14 @@ fun OnboardingSetLockScreen(
                         isError -> Color(0xFFFF3B30)
                         else -> Color(0xFF334155)
                     },
-                    fontSize = 13.sp,
+                    fontSize = 11.5.sp,
                     fontWeight = FontWeight.SemiBold
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // ──────────────────────────────────────────────────────────
-                // Input Component (PIN or Pattern)
+                // Input Component (Pattern or PIN)
                 // ──────────────────────────────────────────────────────────
                 if (selectedLockType == LockTypeOption.PATTERN) {
                     PatternLockView(
@@ -372,7 +369,7 @@ fun OnboardingSetLockScreen(
                                 }
                             }
                         },
-                        modifier = Modifier.size(240.dp)
+                        modifier = Modifier.size(190.dp)
                     )
                 } else {
                     // PIN Mode (4-digit or 6-digit)
@@ -386,7 +383,7 @@ fun OnboardingSetLockScreen(
                         emptyBorderColor = Color(0xFFCBD5E1)
                     )
 
-                    Spacer(modifier = Modifier.height(18.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     PinKeypad(
                         onNumberClick = { digit ->
@@ -448,27 +445,28 @@ fun OnboardingSetLockScreen(
                         },
                         keyColor = Color(0xFFF1F5F9),
                         textColor = Color(0xFF0F172A),
-                        borderColor = Color(0xFFE2E8F0)
+                        borderColor = Color(0xFFE2E8F0),
+                        keySize = 48.dp,
+                        rowSpacing = 6.dp,
+                        fontSize = 20.sp
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Complete & Get Started Button
-        AppGradientButton(
-            text = if (isConfiguredSuccessfully) "Get Started" else "Continue",
-            onClick = {
-                coroutineScope.launch {
-                    preferencesDataSource.setOnboardingCompleted(true)
-                    onNavigateToHome()
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            height = 52.dp
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
+        // ── BOTTOM BUTTON ───────────────────────────────────────────────────
+        Column(modifier = Modifier.fillMaxWidth()) {
+            AppGradientButton(
+                text = if (isConfiguredSuccessfully) "Get Started" else "Continue",
+                onClick = {
+                    coroutineScope.launch {
+                        preferencesDataSource.setOnboardingCompleted(true)
+                        onNavigateToHome()
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                height = 46.dp
+            )
+        }
     }
 }

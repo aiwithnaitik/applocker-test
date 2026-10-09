@@ -86,6 +86,9 @@ fun PinKeypad(
     keyColor: Color = SurfaceCard.copy(alpha = 0.85f),
     textColor: Color = TextPrimary,
     borderColor: Color = BorderSubtle.copy(alpha = 0.5f),
+    keySize: androidx.compose.ui.unit.Dp = 72.dp,
+    rowSpacing: androidx.compose.ui.unit.Dp = 16.dp,
+    fontSize: androidx.compose.ui.unit.TextUnit = 26.sp,
     modifier: Modifier = Modifier
 ) {
     val keypadRows = listOf(
@@ -97,7 +100,7 @@ fun PinKeypad(
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(rowSpacing)
     ) {
         for (row in keypadRows) {
             Row(
@@ -110,6 +113,8 @@ fun PinKeypad(
                         keyColor = keyColor,
                         textColor = textColor,
                         borderColor = borderColor,
+                        size = keySize,
+                        fontSize = fontSize,
                         onClick = { onNumberClick(number) }
                     )
                 }
@@ -125,7 +130,7 @@ fun PinKeypad(
             if (onBiometricClick != null) {
                 Box(
                     modifier = Modifier
-                        .size(72.dp)
+                        .size(keySize)
                         .clip(CircleShape)
                         .clickable { onBiometricClick() },
                     contentAlignment = Alignment.Center
@@ -134,11 +139,11 @@ fun PinKeypad(
                         imageVector = Icons.Default.Fingerprint,
                         contentDescription = "Biometric Unlock",
                         tint = activeColorOrFallback(textColor, ElectricCyan),
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size((keySize.value * 0.44f).dp)
                     )
                 }
             } else {
-                Spacer(modifier = Modifier.size(72.dp))
+                Spacer(modifier = Modifier.size(keySize))
             }
 
             PinKey(
@@ -146,12 +151,14 @@ fun PinKeypad(
                 keyColor = keyColor,
                 textColor = textColor,
                 borderColor = borderColor,
+                size = keySize,
+                fontSize = fontSize,
                 onClick = { onNumberClick(0) }
             )
 
             Box(
                 modifier = Modifier
-                    .size(72.dp)
+                    .size(keySize)
                     .clip(CircleShape)
                     .clickable { onDeleteClick() },
                 contentAlignment = Alignment.Center
@@ -160,7 +167,7 @@ fun PinKeypad(
                     imageVector = Icons.Default.Backspace,
                     contentDescription = "Backspace",
                     tint = textColor.copy(alpha = 0.65f),
-                    modifier = Modifier.size(26.dp)
+                    modifier = Modifier.size((keySize.value * 0.38f).dp)
                 )
             }
         }
@@ -177,11 +184,13 @@ private fun PinKey(
     keyColor: Color,
     textColor: Color,
     borderColor: Color,
+    size: androidx.compose.ui.unit.Dp = 72.dp,
+    fontSize: androidx.compose.ui.unit.TextUnit = 26.sp,
     onClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
-            .size(72.dp)
+            .size(size)
             .clip(CircleShape)
             .background(keyColor)
             .border(1.dp, borderColor, CircleShape)
@@ -193,7 +202,7 @@ private fun PinKey(
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.SemiBold,
             color = textColor,
-            fontSize = 26.sp
+            fontSize = fontSize
         )
     }
 }
