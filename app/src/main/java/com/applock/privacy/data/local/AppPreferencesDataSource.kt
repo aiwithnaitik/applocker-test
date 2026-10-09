@@ -30,11 +30,13 @@ class AppPreferencesDataSource(private val context: Context) {
         val KEY_ONBOARDING_REASON = stringPreferencesKey("onboarding_reason")
         val KEY_PIN_HASH = stringPreferencesKey("pin_hash")
         val KEY_PIN_SALT = stringPreferencesKey("pin_salt")
+        val KEY_PIN_LENGTH = intPreferencesKey("pin_length")
         val KEY_PATTERN_HASH = stringPreferencesKey("pattern_hash")
         val KEY_PATTERN_SALT = stringPreferencesKey("pattern_salt")
         val KEY_LOCK_TYPE = stringPreferencesKey("lock_type") // "pin" or "pattern"
         val KEY_SELECTED_THEME_ID = stringPreferencesKey("selected_theme_id")
         val KEY_APP_MONITOR_ACTIVE = booleanPreferencesKey("app_monitor_active")
+        val KEY_FORCE_PERMISSIONS_UNGRANTED = booleanPreferencesKey("force_permissions_ungranted")
 
         // Phase 12 & 13: Themes & Monetization
         val KEY_CUSTOM_THEMES_JSON = stringPreferencesKey("custom_themes_json")
@@ -104,6 +106,14 @@ class AppPreferencesDataSource(private val context: Context) {
 
     val lockTypeFlow: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[KEY_LOCK_TYPE] ?: "pin"
+    }
+
+    val pinLengthFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[KEY_PIN_LENGTH] ?: 4
+    }
+
+    val isForcePermissionsUngrantedFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[KEY_FORCE_PERMISSIONS_UNGRANTED] ?: false
     }
 
     val selectedThemeIdFlow: Flow<String> = context.dataStore.data.map { preferences ->
@@ -327,10 +337,36 @@ class AppPreferencesDataSource(private val context: Context) {
         }
     }
 
+    suspend fun setPinLength(length: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_PIN_LENGTH] = length
+        }
+    }
+
+    suspend fun setForcePermissionsUngranted(ungranted: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_FORCE_PERMISSIONS_UNGRANTED] = ungranted
+        }
+    }
+
+    suspend fun clearAllLockedPackages() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(KEY_LOCKED_PACKAGES)
+        }
+    }
+
     suspend fun resetOnboarding() {
         context.dataStore.edit { preferences ->
             preferences[KEY_ONBOARDING_COMPLETED] = false
             preferences.remove(KEY_ONBOARDING_REASON)
+            preferences[KEY_FORCE_PERMISSIONS_UNGRANTED] = true
+            preferences.remove(KEY_LOCKED_PACKAGES)
+            preferences.remove(KEY_PIN_HASH)
+            preferences.remove(KEY_PIN_SALT)
+            preferences.remove(KEY_PATTERN_HASH)
+            preferences.remove(KEY_PATTERN_SALT)
+            preferences[KEY_PIN_LENGTH] = 4
+            preferences[KEY_APP_MONITOR_ACTIVE] = false
         }
     }
 

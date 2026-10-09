@@ -8,6 +8,8 @@ object AppConstants {
     // Navigation Routes
     const val ROUTE_SPLASH = "splash"
     const val ROUTE_ONBOARDING_REASON = "onboarding_reason"
+    const val ROUTE_ONBOARDING_EXPLAINER = "onboarding_explainer"
+    const val ROUTE_ONBOARDING_SET_LOCK = "onboarding_set_lock"
     const val ROUTE_ONBOARDING_COMPLETE = "onboarding_complete"
     const val ROUTE_HOME = "home"
     const val ROUTE_TOOLS = "tools"

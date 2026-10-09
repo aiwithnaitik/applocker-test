@@ -72,38 +72,6 @@ fun OnboardingReasonScreen(
     var selectedReasonId by remember { mutableStateOf<String?>("privacy") }
     val scrollState = rememberScrollState()
 
-    val reasons = listOf(
-        OnboardingReason(
-            id = "privacy",
-            title = "I want more privacy",
-            subtitle = "Keep private apps hidden from prying eyes",
-            icon = Icons.Default.Security
-        ),
-        OnboardingReason(
-            id = "personal_apps",
-            title = "I want to protect personal apps",
-            subtitle = "Lock WhatsApp, Photos, Instagram, and Banking",
-            icon = Icons.Default.PhoneAndroid
-        ),
-        OnboardingReason(
-            id = "shared_phone",
-            title = "I share my phone with others",
-            subtitle = "Prevent family, friends, or kids from opening sensitive apps",
-            icon = Icons.Default.Group
-        ),
-        OnboardingReason(
-            id = "extra_security",
-            title = "I want extra security",
-            subtitle = "Secondary PIN/biometric authentication layer",
-            icon = Icons.Default.Lock
-        ),
-        OnboardingReason(
-            id = "other",
-            title = "Other",
-            subtitle = "General device safety & privacy utility",
-            icon = Icons.Default.MoreHoriz
-        )
-    )
 
     Column(
         modifier = Modifier
@@ -119,10 +87,12 @@ fun OnboardingReasonScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AppStatusBadge(
-                text = "STEP 1 OF 2",
+            Text(
+                text = "1/3",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
                 color = ElectricCyan,
-                showDot = false
+                fontSize = 16.sp
             )
 
             Text(
@@ -154,7 +124,7 @@ fun OnboardingReasonScreen(
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = "Help us understand your privacy priorities. This can be skipped and will not restrict any features.",
+            text = "Help us understand your privacy priorities. This can be skipped anytime.",
             style = MaterialTheme.typography.bodyMedium,
             color = TextMuted,
             lineHeight = 20.sp
@@ -162,17 +132,51 @@ fun OnboardingReasonScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        reasons.forEach { reason ->
+        val uniformReasons = listOf(
+            OnboardingReason(
+                id = "privacy",
+                title = "More Privacy",
+                subtitle = "Keep sensitive apps hidden from prying eyes",
+                icon = Icons.Default.Security
+            ),
+            OnboardingReason(
+                id = "personal_apps",
+                title = "Social & Banking",
+                subtitle = "Lock WhatsApp, Photos, Instagram, Finance",
+                icon = Icons.Default.PhoneAndroid
+            ),
+            OnboardingReason(
+                id = "shared_phone",
+                title = "Shared Device",
+                subtitle = "Prevent family, friends & kids opening apps",
+                icon = Icons.Default.Group
+            ),
+            OnboardingReason(
+                id = "extra_security",
+                title = "Extra Security",
+                subtitle = "Secondary PIN and biometric defense layer",
+                icon = Icons.Default.Lock
+            ),
+            OnboardingReason(
+                id = "other",
+                title = "General Safety",
+                subtitle = "Comprehensive device protection and safety",
+                icon = Icons.Default.MoreHoriz
+            )
+        )
+
+        uniformReasons.forEach { reason ->
             val isSelected = selectedReasonId == reason.id
 
             AppGlassCard(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(78.dp)
                     .clickable { selectedReasonId = reason.id },
                 borderColor = if (isSelected) ElectricCyan else null
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxSize(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -182,7 +186,7 @@ fun OnboardingReasonScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(44.dp)
+                                .size(42.dp)
                                 .clip(CircleShape)
                                 .background(if (isSelected) ElectricCyan.copy(alpha = 0.2f) else SurfaceCard),
                             contentAlignment = Alignment.Center
@@ -197,19 +201,23 @@ fun OnboardingReasonScreen(
 
                         Spacer(modifier = Modifier.width(14.dp))
 
-                        Column {
+                        Column(
+                            verticalArrangement = Arrangement.Center
+                        ) {
                             Text(
                                 text = reason.title,
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary
+                                color = TextPrimary,
+                                maxLines = 1
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = reason.subtitle,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = TextSecondary,
-                                fontSize = 12.sp
+                                fontSize = 12.sp,
+                                maxLines = 1
                             )
                         }
                     }

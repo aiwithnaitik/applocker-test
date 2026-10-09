@@ -40,6 +40,8 @@ fun PinDotsIndicator(
     pinLength: Int = 4,
     enteredLength: Int,
     isError: Boolean = false,
+    activeColor: Color = ElectricCyan,
+    emptyBorderColor: Color = BorderSubtle,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -52,7 +54,7 @@ fun PinDotsIndicator(
             val dotColor by animateColorAsState(
                 targetValue = when {
                     isError -> Color(0xFFFF5252)
-                    isFilled -> ElectricCyan
+                    isFilled -> activeColor
                     else -> Color.Transparent
                 },
                 animationSpec = tween(150),
@@ -61,8 +63,8 @@ fun PinDotsIndicator(
 
             val borderColor = when {
                 isError -> Color(0xFFFF5252)
-                isFilled -> ElectricCyan
-                else -> BorderSubtle
+                isFilled -> activeColor
+                else -> emptyBorderColor
             }
 
             Box(
@@ -81,6 +83,9 @@ fun PinKeypad(
     onNumberClick: (Int) -> Unit,
     onDeleteClick: () -> Unit,
     onBiometricClick: (() -> Unit)? = null,
+    keyColor: Color = SurfaceCard.copy(alpha = 0.85f),
+    textColor: Color = TextPrimary,
+    borderColor: Color = BorderSubtle.copy(alpha = 0.5f),
     modifier: Modifier = Modifier
 ) {
     val keypadRows = listOf(
@@ -102,6 +107,9 @@ fun PinKeypad(
                 for (number in row) {
                     PinKey(
                         text = number.toString(),
+                        keyColor = keyColor,
+                        textColor = textColor,
+                        borderColor = borderColor,
                         onClick = { onNumberClick(number) }
                     )
                 }
@@ -125,7 +133,7 @@ fun PinKeypad(
                     Icon(
                         imageVector = Icons.Default.Fingerprint,
                         contentDescription = "Biometric Unlock",
-                        tint = ElectricCyan,
+                        tint = activeColorOrFallback(textColor, ElectricCyan),
                         modifier = Modifier.size(32.dp)
                     )
                 }
@@ -135,6 +143,9 @@ fun PinKeypad(
 
             PinKey(
                 text = "0",
+                keyColor = keyColor,
+                textColor = textColor,
+                borderColor = borderColor,
                 onClick = { onNumberClick(0) }
             )
 
@@ -148,7 +159,7 @@ fun PinKeypad(
                 Icon(
                     imageVector = Icons.Default.Backspace,
                     contentDescription = "Backspace",
-                    tint = TextMuted,
+                    tint = textColor.copy(alpha = 0.65f),
                     modifier = Modifier.size(26.dp)
                 )
             }
@@ -156,17 +167,24 @@ fun PinKeypad(
     }
 }
 
+private fun activeColorOrFallback(textColor: Color, fallback: Color): Color {
+    return if (textColor == Color(0xFF0F172A)) Color(0xFF0284C7) else fallback
+}
+
 @Composable
 private fun PinKey(
     text: String,
+    keyColor: Color,
+    textColor: Color,
+    borderColor: Color,
     onClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .size(72.dp)
             .clip(CircleShape)
-            .background(SurfaceCard.copy(alpha = 0.85f))
-            .border(1.dp, BorderSubtle.copy(alpha = 0.5f), CircleShape)
+            .background(keyColor)
+            .border(1.dp, borderColor, CircleShape)
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
@@ -174,7 +192,7 @@ private fun PinKey(
             text = text,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.SemiBold,
-            color = TextPrimary,
+            color = textColor,
             fontSize = 26.sp
         )
     }

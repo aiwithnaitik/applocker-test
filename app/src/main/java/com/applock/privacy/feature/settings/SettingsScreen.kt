@@ -866,11 +866,17 @@ fun SettingsScreen(
 
             SettingNavigationItem(
                 title = "Restart Onboarding Flow",
-                subtitle = "Reset onboarding state to test splash and intro screens",
+                subtitle = "Reset onboarding & ungrant all permissions for testing",
                 icon = Icons.Default.Refresh,
                 onClick = {
                     coroutineScope.launch {
                         preferencesDataSource.resetOnboarding()
+                        PermissionManager.setMockUngranted(true)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            try {
+                                context.revokeSelfPermissionsOnKill(listOf(Manifest.permission.POST_NOTIFICATIONS, Manifest.permission.CAMERA))
+                            } catch (_: Exception) {}
+                        }
                         onResetOnboarding?.invoke()
                     }
                 }

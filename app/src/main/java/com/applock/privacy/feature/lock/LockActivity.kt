@@ -512,9 +512,11 @@ private fun LockScreenContent(
                     }
                 )
             } else {
+                val configuredPinLength by preferencesDataSource.pinLengthFlow.collectAsState(initial = 4)
+
                 // PIN Lock Mode
                 PinDotsIndicator(
-                    pinLength = 4,
+                    pinLength = configuredPinLength,
                     enteredLength = enteredPin.length,
                     isError = isError
                 )
@@ -524,14 +526,14 @@ private fun LockScreenContent(
                 PinKeypad(
                     onNumberClick = { digit ->
                         if (isLockedOut) return@PinKeypad
-                        if (enteredPin.length < 4) {
+                        if (enteredPin.length < configuredPinLength) {
                             val newPin = enteredPin + digit
                             enteredPin = newPin
                             isError = false
                             errorMessage = null
                             if (isHapticEnabled) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
 
-                            if (newPin.length == 4) {
+                            if (newPin.length == configuredPinLength) {
                                 coroutineScope.launch {
                                     val result = SecurityManager.verifyPinWithResult(preferencesDataSource, newPin)
                                     when (result) {

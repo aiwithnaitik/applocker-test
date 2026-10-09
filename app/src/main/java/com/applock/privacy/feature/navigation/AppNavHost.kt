@@ -87,13 +87,32 @@ fun AppNavHost() {
                 OnboardingReasonScreen(
                     preferencesDataSource = preferencesDataSource,
                     onNavigateNext = {
-                        navController.navigate(AppConstants.ROUTE_ONBOARDING_COMPLETE)
+                        navController.navigate(AppConstants.ROUTE_ONBOARDING_EXPLAINER)
+                    }
+                )
+            }
+
+            composable(AppConstants.ROUTE_ONBOARDING_EXPLAINER) {
+                com.applock.privacy.feature.onboarding.OnboardingSecurityExplainerScreen(
+                    onNavigateNext = {
+                        navController.navigate(AppConstants.ROUTE_ONBOARDING_SET_LOCK)
+                    }
+                )
+            }
+
+            composable(AppConstants.ROUTE_ONBOARDING_SET_LOCK) {
+                com.applock.privacy.feature.onboarding.OnboardingSetLockScreen(
+                    preferencesDataSource = preferencesDataSource,
+                    onNavigateToHome = {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(AppConstants.ROUTE_ONBOARDING_REASON) { inclusive = true }
+                        }
                     }
                 )
             }
 
             composable(AppConstants.ROUTE_ONBOARDING_COMPLETE) {
-                OnboardingCompleteScreen(
+                com.applock.privacy.feature.onboarding.OnboardingSetLockScreen(
                     preferencesDataSource = preferencesDataSource,
                     onNavigateToHome = {
                         navController.navigate(Screen.Home.route) {
