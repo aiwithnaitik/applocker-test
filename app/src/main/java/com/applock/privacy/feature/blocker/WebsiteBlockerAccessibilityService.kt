@@ -48,7 +48,12 @@ class WebsiteBlockerAccessibilityService : AccessibilityService() {
 
         // 1. Instant Zero-Latency App Lock Interception (Hardware-speed OS window event)
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            AppLockSession.onForegroundPackageChanged(packageName)
+            val active = AppLockSession.activeUnlockedPackage
+            if (active != null && packageName != active && packageName != applicationContext.packageName) {
+                AppLockSession.clearSession()
+            } else {
+                AppLockSession.onForegroundPackageChanged(packageName)
+            }
 
             if (packageName != applicationContext.packageName && cachedIsMonitorActive) {
                 if (cachedLockedPackages.contains(packageName)) {

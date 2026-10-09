@@ -238,6 +238,23 @@ fun PermissionScreen(
             )
         }
 
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // 5. Instant Protection & Anti-Bypass (Accessibility Service)
+        val isAccessibilityEnabled = remember(permissionStatus) {
+            PermissionManager.isAccessibilityServiceEnabled(context)
+        }
+        PermissionCard(
+            title = "Instant Shield (Anti-Bypass)",
+            description = "Enables instantaneous 0ms interception so apps can never be bypassed via fast app switching or recent tabs.",
+            icon = Icons.Default.Security,
+            isGranted = isAccessibilityEnabled,
+            isRequired = false,
+            onActionClick = {
+                PermissionManager.openAccessibilitySettings(context)
+            }
+        )
+
         Spacer(modifier = Modifier.height(28.dp))
 
         AppGradientButton(
