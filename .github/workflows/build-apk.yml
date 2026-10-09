@@ -56,11 +56,11 @@ jobs:
             git push origin HEAD:main || true
           fi
 
-      - name: Build Debug APK with Gradle
+      - name: Build Debug APK & Release AAB with Gradle
         run: |
           set -o pipefail
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace 2>&1 | tee build.log || {
+          ./gradlew assembleDebug bundleRelease --stacktrace 2>&1 | tee build.log || {
             echo "### Gradle Build Error" >> $GITHUB_STEP_SUMMARY
             echo '```text' >> $GITHUB_STEP_SUMMARY
             tail -n 120 build.log >> $GITHUB_STEP_SUMMARY
@@ -75,6 +75,14 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 14
           if-no-files-found: error
+
+      - name: Upload Release AAB Bundle Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AppLock-Release-AAB
+          path: app/build/outputs/bundle/release/*.aab
+          retention-days: 30
+          if-no-files-found: warn
 
       - name: Reset Release Tag (Refreshes published_at for in-app OTA detection)
         uses: actions/github-script@v7
@@ -108,14 +116,16 @@ jobs:
               console.log('Tag delete message:', e.message);
             }
 
-      - name: Publish Direct APK to GitHub Releases (For In-App Auto-Update)
+      - name: Publish Direct APK & AAB to GitHub Releases (For In-App Auto-Update & Play Store)
         uses: softprops/action-gh-release@v2
         if: success() && github.ref == 'refs/heads/main'
         with:
           tag_name: latest
           name: "AppLock Latest (${{ github.run_number }})"
           body: "Automated continuous build for AppLock. Run #${{ github.run_number }} from commit ${{ github.sha }}."
-          files: app/build/outputs/apk/debug/*.apk
+          files: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/bundle/release/*.aab
           draft: false
           prerelease: true
         env:

@@ -223,6 +223,21 @@ fun PermissionScreen(
             }
         )
 
+        // 4. OEM Auto-Start & Task Killer Protection (Phase 26)
+        if (PermissionManager.isOemWithAggressiveTaskKiller()) {
+            Spacer(modifier = Modifier.height(14.dp))
+            PermissionCard(
+                title = "Vendor Auto-Start Whitelist",
+                description = "Grant background auto-launch permission for ${android.os.Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} to prevent system task-killers from freezing AppLock.",
+                icon = Icons.Default.Security,
+                isGranted = permissionStatus.isBatteryOptimizedIgnored,
+                isRequired = false,
+                onActionClick = {
+                    PermissionManager.openOemAutoStartSettings(context)
+                }
+            )
+        }
+
         Spacer(modifier = Modifier.height(28.dp))
 
         AppGradientButton(

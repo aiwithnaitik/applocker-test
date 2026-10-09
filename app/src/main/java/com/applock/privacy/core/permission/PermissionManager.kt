@@ -212,4 +212,58 @@ object PermissionManager {
             context.startActivity(intent)
         } catch (_: Exception) {}
     }
+
+    /**
+     * Checks if current device is an OEM known for aggressive background process killing (Phase 26).
+     */
+    fun isOemWithAggressiveTaskKiller(): Boolean {
+        val manufacturer = Build.MANUFACTURER.lowercase()
+        return manufacturer.contains("xiaomi") ||
+                manufacturer.contains("redmi") ||
+                manufacturer.contains("huawei") ||
+                manufacturer.contains("honor") ||
+                manufacturer.contains("oppo") ||
+                manufacturer.contains("realme") ||
+                manufacturer.contains("vivo") ||
+                manufacturer.contains("oneplus") ||
+                manufacturer.contains("samsung")
+    }
+
+    /**
+     * Attempts to open OEM-specific Auto-Start / Background Power manager activities.
+     * Returns true if an OEM activity was successfully matched and launched.
+     */
+    fun openOemAutoStartSettings(context: Context): Boolean {
+        val intents = listOf(
+            // Xiaomi / Redmi (MIUI & HyperOS)
+            Intent().setComponent(android.content.ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")),
+            // Huawei / Honor
+            Intent().setComponent(android.content.ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity")),
+            Intent().setComponent(android.content.ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.bootstart.BootStartActivity")),
+            // Oppo / Realme
+            Intent().setComponent(android.content.ComponentName("com.coloros.safecenter", "com.coloros.safecenter.startupapp.StartupAppListActivity")),
+            Intent().setComponent(android.content.ComponentName("com.oppo.safe", "com.oppo.safe.permission.startup.StartupAppListActivity")),
+            // Vivo / iQOO
+            Intent().setComponent(android.content.ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity")),
+            Intent().setComponent(android.content.ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.PurviewTabActivity")),
+            // Samsung Device Care
+            Intent().setComponent(android.content.ComponentName("com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity")),
+            // OnePlus
+            Intent().setComponent(android.content.ComponentName("com.oneplus.security", "com.oneplus.security.chainlaunch.view.ChainLaunchAppListActivity"))
+        )
+
+        for (intent in intents) {
+            try {
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                context.startActivity(intent)
+                return true
+            } catch (_: Exception) {
+                // Continue searching fallback list
+            }
+        }
+
+        // Generic fallback to standard app settings
+        openAppSettings(context)
+        return false
+    }
 }
