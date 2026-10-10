@@ -204,7 +204,7 @@ class AppMonitorService : Service() {
 
                 // If user is actively using AppLock itself, sleep to eliminate UI lag & Binder IPC contention
                 if (AppLockSession.isAppInForeground) {
-                    delay(500)
+                    delay(1200)
                     continue
                 }
 
@@ -217,25 +217,13 @@ class AppMonitorService : Service() {
                         val locked = cachedLockedPackages
 
                         if (locked.isNotEmpty()) {
-                            val activePackage = AppLockSession.activeUnlockedPackage
-                            val isGrace = AppLockSession.isGracePeriodActive()
-                            val state = inspectForegroundState(
+                            val foregroundPackage = getForegroundPackage(
                                 usageStatsManager = usageStatsManager,
-                                activeUnlockedPackage = activePackage,
-                                launcherPackages = launcherPackages,
-                                lastUnlockTimestamp = AppLockSession.lastUnlockTimestamp,
-                                isGracePeriod = isGrace,
                                 lastObservedPackage = lastObservedPackage
                             )
+                            val isGrace = AppLockSession.isGracePeriodActive()
 
-                            // 1. Immediate Relock: If user exited the unlocked app (pressed Home, opened Recents tabs, locked screen)
-                            if (!isGrace && state.isTargetAppBackgrounded) {
-                                AppLockSession.clearSession()
-                            }
-
-                            val foregroundPackage = state.foregroundPackage
-
-                            // 2. If user is currently on home launcher or switched to another app
+                            // 1. If user switched to home launcher or another application, relock session
                             if (!isGrace && foregroundPackage != null) {
                                 if (launcherPackages.contains(foregroundPackage)) {
                                     AppLockSession.clearSession()
@@ -244,7 +232,7 @@ class AppMonitorService : Service() {
                                 }
                             }
 
-                            // 3. Intercept protected application
+                            // 2. Intercept protected application if not already unlocked
                             if (foregroundPackage != null &&
                                 foregroundPackage != packageName &&
                                 !launcherPackages.contains(foregroundPackage) &&
@@ -277,26 +265,10 @@ class AppMonitorService : Service() {
         }
     }
 
-    private data class MonitoringState(
-        val foregroundPackage: String?,
-        val isTargetAppBackgrounded: Boolean
-    )
-
-    private fun inspectForegroundState(
+    private fun getForegroundPackage(
         usageStatsManager: UsageStatsManager,
-        activeUnlockedPackage: String?,
-        launcherPackages: Set<String>,
-        lastUnlockTimestamp: Long,
-        isGracePeriod: Boolean,
         lastObservedPackage: String?
-    ): MonitoringState {
-        if (isGracePeriod) {
-            return MonitoringState(
-                foregroundPackage = activeUnlockedPackage,
-                isTargetAppBackgrounded = false
-            )
-        }
-
+    ): String? {
         val now = System.currentTimeMillis()
         val events = usageStatsManager.queryEvents(now - 3000L, now)
         val event = UsageEvents.Event()
@@ -304,55 +276,21 @@ class AppMonitorService : Service() {
         var latestResumedPkg: String? = null
         var latestResumedTime: Long = 0L
 
-        var activePkgPostUnlockPausedOrStoppedTime: Long = 0L
-        var activePkgPostUnlockResumedTime: Long = 0L
-
-        val validPostUnlockThreshold = lastUnlockTimestamp + 600L
-
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
             val pkg = event.packageName ?: continue
-            val time = event.timeStamp
-
-            when (event.eventType) {
-                UsageEvents.Event.ACTIVITY_RESUMED -> {
-                    if (time >= latestResumedTime) {
-                        latestResumedTime = time
-                        latestResumedPkg = pkg
-                    }
-                    if (pkg == activeUnlockedPackage && time >= validPostUnlockThreshold && time >= activePkgPostUnlockResumedTime) {
-                        activePkgPostUnlockResumedTime = time
-                    }
-                }
-                UsageEvents.Event.ACTIVITY_PAUSED,
-                UsageEvents.Event.ACTIVITY_STOPPED -> {
-                    if (pkg == activeUnlockedPackage && time >= validPostUnlockThreshold && time >= activePkgPostUnlockPausedOrStoppedTime) {
-                        activePkgPostUnlockPausedOrStoppedTime = time
-                    }
+            if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
+                if (event.timeStamp >= latestResumedTime) {
+                    latestResumedTime = event.timeStamp
+                    latestResumedPkg = pkg
                 }
             }
         }
 
-        // If the active unlocked package was paused or stopped after its last resumed time, it is backgrounded!
-        val isBackgrounded = if (activeUnlockedPackage != null && !isGracePeriod) {
-            (activePkgPostUnlockPausedOrStoppedTime > activePkgPostUnlockResumedTime && activePkgPostUnlockPausedOrStoppedTime > 0L) ||
-            (latestResumedPkg != null &&
-             !AppLockSession.isSystemOrTransientPackage(latestResumedPkg, packageName) &&
-             latestResumedPkg != activeUnlockedPackage &&
-             latestResumedPkg != packageName)
-        } else {
-            false
-        }
-
-        val finalForeground = latestResumedPkg ?: lastObservedPackage ?: run {
+        return latestResumedPkg ?: lastObservedPackage ?: run {
             val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_BEST, now - 3000L, now)
             stats?.maxByOrNull { it.lastTimeUsed }?.packageName
         }
-
-        return MonitoringState(
-            foregroundPackage = finalForeground,
-            isTargetAppBackgrounded = isBackgrounded
-        )
     }
 }
 

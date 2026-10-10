@@ -194,6 +194,26 @@ fun HomeScreen(
         )
     }
 
+    val onToggleLockApp: (String, Boolean) -> Unit = remember(preferencesDataSource, permissionStatus, context) {
+        { pkgName, currentlyLocked ->
+            coroutineScope.launch {
+                val hasSecurity = preferencesDataSource.hasSecurityConfiguredFlow.first()
+                if (!hasSecurity && !currentlyLocked) {
+                    pendingLockPackage = pkgName
+                    showPinSetupDialog = true
+                } else {
+                    preferencesDataSource.setPackageLocked(pkgName, !currentlyLocked)
+                    if (!currentlyLocked) {
+                        preferencesDataSource.setAppMonitorActive(true)
+                        if (permissionStatus.isCorePermissionsGranted) {
+                            AppMonitorService.start(context)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -597,24 +617,7 @@ fun HomeScreen(
                     AppListItem(
                         app = app,
                         isLocked = isLocked,
-                        onToggleLock = {
-                            coroutineScope.launch {
-                                val hasSecurity = preferencesDataSource.hasSecurityConfiguredFlow.first()
-                                if (!hasSecurity && !isLocked) {
-                                    pendingLockPackage = app.packageName
-                                    showPinSetupDialog = true
-                                } else {
-                                    preferencesDataSource.setPackageLocked(app.packageName, !isLocked)
-                                    if (!isLocked) {
-                                        preferencesDataSource.setAppMonitorActive(true)
-                                        if (permissionStatus.isCorePermissionsGranted) {
-                                            AppMonitorService.start(context)
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        modifier = Modifier.animateItem()
+                        onToggleLock = onToggleLockApp
                     )
                 }
             }
@@ -630,90 +633,83 @@ fun HomeScreen(
 private fun AppListItem(
     app: AppInfo,
     isLocked: Boolean,
-    onToggleLock: () -> Unit,
+    onToggleLock: (String, Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(SurfaceCard)
+            .background(SurfaceCard, RoundedCornerShape(14.dp))
             .border(
                 width = 1.dp,
                 color = if (isLocked) ElectricCyan.copy(alpha = 0.5f) else BorderSubtle.copy(alpha = 0.55f),
                 shape = RoundedCornerShape(14.dp)
             )
-            .clickable(onClick = onToggleLock)
-            .padding(horizontal = 14.dp, vertical = 11.dp)
+            .clickable { onToggleLock(app.packageName, isLocked) }
+            .padding(horizontal = 14.dp, vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(11.dp))
-                        .background(Color(0xFFF1F5F9))
-                        .border(1.dp, BorderSubtle.copy(alpha = 0.4f), RoundedCornerShape(11.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (app.iconBitmap != null) {
-                        Image(
-                            bitmap = app.iconBitmap,
-                            contentDescription = null,
-                            modifier = Modifier.size(34.dp)
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Shield,
-                            contentDescription = null,
-                            tint = ElectricCyan,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(13.dp))
-
-                Text(
-                    text = app.appName,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    fontSize = 15.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // Padlock Lock Toggle Icon Button
             Box(
                 modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(if (isLocked) ElectricCyan else Color(0xFFF1F5F9))
-                    .border(
-                        1.dp,
-                        if (isLocked) ElectricCyan else BorderSubtle.copy(alpha = 0.65f),
-                        CircleShape
-                    ),
+                    .size(44.dp)
+                    .background(Color(0xFFF1F5F9), RoundedCornerShape(11.dp))
+                    .border(1.dp, BorderSubtle.copy(alpha = 0.4f), RoundedCornerShape(11.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = if (isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
-                    contentDescription = if (isLocked) "Locked" else "Unlocked",
-                    tint = if (isLocked) Color.White else TextMuted,
-                    modifier = Modifier.size(19.dp)
-                )
+                if (app.iconBitmap != null) {
+                    Image(
+                        bitmap = app.iconBitmap,
+                        contentDescription = null,
+                        modifier = Modifier.size(34.dp)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Shield,
+                        contentDescription = null,
+                        tint = ElectricCyan,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
+
+            Spacer(modifier = Modifier.width(13.dp))
+
+            Text(
+                text = app.appName,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontSize = 15.sp
+            )
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // Padlock Lock Toggle Icon Button
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .background(if (isLocked) ElectricCyan else Color(0xFFF1F5F9), CircleShape)
+                .border(
+                    1.dp,
+                    if (isLocked) ElectricCyan else BorderSubtle.copy(alpha = 0.65f),
+                    CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                contentDescription = if (isLocked) "Locked" else "Unlocked",
+                tint = if (isLocked) Color.White else TextMuted,
+                modifier = Modifier.size(19.dp)
+            )
         }
     }
 }
