@@ -142,10 +142,18 @@ class LockActivity : FragmentActivity() {
 
         setContent {
             AppLockTheme {
+                val isSmartThemeEnabled by preferencesDataSource.isSmartThemeEnabledFlow.collectAsState(initial = false)
                 val currentThemeId by preferencesDataSource.selectedThemeIdFlow.collectAsState(initial = "pure_light")
                 val customThemes by preferencesDataSource.customThemesFlow.collectAsState(initial = emptyList())
-                val activeTheme = remember(currentThemeId, customThemes) {
-                    AppThemeCatalog.getThemeById(currentThemeId, customThemes)
+                val smartRandomTheme = remember {
+                    AppThemeCatalog.allThemes.randomOrNull() ?: AppThemeCatalog.PureLight
+                }
+                val activeTheme = remember(isSmartThemeEnabled, currentThemeId, customThemes) {
+                    if (isSmartThemeEnabled) {
+                        smartRandomTheme
+                    } else {
+                        AppThemeCatalog.getThemeById(currentThemeId, customThemes)
+                    }
                 }
 
                 val defaultLockType by preferencesDataSource.lockTypeFlow.collectAsState(initial = "pin")

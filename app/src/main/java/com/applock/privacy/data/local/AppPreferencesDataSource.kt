@@ -40,6 +40,7 @@ class AppPreferencesDataSource(private val context: Context) {
         // Phase 12 & 13: Themes & Monetization
         val KEY_CUSTOM_THEMES_JSON = stringPreferencesKey("custom_themes_json")
         val KEY_UNLOCKED_THEMES = stringSetPreferencesKey("unlocked_themes")
+        val KEY_SMART_THEME_ENABLED = booleanPreferencesKey("smart_theme_enabled")
 
         // Phase 14: Core Customization
         val KEY_IS_PATTERN_VISIBLE = booleanPreferencesKey("is_pattern_visible")
@@ -135,6 +136,10 @@ class AppPreferencesDataSource(private val context: Context) {
     // Phase 13: Unlocked Themes
     val unlockedThemeIdsFlow: Flow<Set<String>> = context.dataStore.data.map { preferences ->
         preferences[KEY_UNLOCKED_THEMES] ?: setOf("pure_light", "sapphire_glass", "cyber_neon", "emerald_matrix", "obsidian_dark")
+    }
+
+    val isSmartThemeEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[KEY_SMART_THEME_ENABLED] ?: false
     }
 
     // Phase 14: Settings Customization
@@ -309,6 +314,12 @@ class AppPreferencesDataSource(private val context: Context) {
     suspend fun setSelectedTheme(themeId: String) {
         context.dataStore.edit { preferences ->
             preferences[KEY_SELECTED_THEME_ID] = themeId
+        }
+    }
+
+    suspend fun setSmartThemeEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_SMART_THEME_ENABLED] = enabled
         }
     }
 
