@@ -202,6 +202,12 @@ class AppMonitorService : Service() {
                     continue
                 }
 
+                // If user is actively using AppLock itself, sleep to eliminate UI lag & Binder IPC contention
+                if (AppLockSession.isAppInForeground) {
+                    delay(500)
+                    continue
+                }
+
                 var nextDelay = 80L
 
                 try {
@@ -218,7 +224,8 @@ class AppMonitorService : Service() {
                                 activeUnlockedPackage = activePackage,
                                 launcherPackages = launcherPackages,
                                 lastUnlockTimestamp = AppLockSession.lastUnlockTimestamp,
-                                isGracePeriod = isGrace
+                                isGracePeriod = isGrace,
+                                lastObservedPackage = lastObservedPackage
                             )
 
                             // 1. Immediate Relock: If user exited the unlocked app (pressed Home, opened Recents tabs, locked screen)
@@ -280,7 +287,8 @@ class AppMonitorService : Service() {
         activeUnlockedPackage: String?,
         launcherPackages: Set<String>,
         lastUnlockTimestamp: Long,
-        isGracePeriod: Boolean
+        isGracePeriod: Boolean,
+        lastObservedPackage: String?
     ): MonitoringState {
         if (isGracePeriod) {
             return MonitoringState(
@@ -290,7 +298,7 @@ class AppMonitorService : Service() {
         }
 
         val now = System.currentTimeMillis()
-        val events = usageStatsManager.queryEvents(now - 8000, now)
+        val events = usageStatsManager.queryEvents(now - 3000L, now)
         val event = UsageEvents.Event()
 
         var latestResumedPkg: String? = null
@@ -336,8 +344,8 @@ class AppMonitorService : Service() {
             false
         }
 
-        val finalForeground = latestResumedPkg ?: run {
-            val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, now - 1000L * 60 * 60 * 24, now)
+        val finalForeground = latestResumedPkg ?: lastObservedPackage ?: run {
+            val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_BEST, now - 3000L, now)
             stats?.maxByOrNull { it.lastTimeUsed }?.packageName
         }
 

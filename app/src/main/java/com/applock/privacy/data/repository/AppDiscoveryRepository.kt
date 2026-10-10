@@ -14,14 +14,23 @@ import kotlinx.coroutines.withContext
 class AppDiscoveryRepository(private val context: Context) {
 
     private val packageManager: PackageManager = context.packageManager
-    private var cachedApps: List<AppInfo>? = null
+
+    companion object {
+        @Volatile
+        private var staticCachedApps: List<AppInfo>? = null
+
+        fun invalidateCache() {
+            staticCachedApps = null
+        }
+    }
 
     /**
      * Discovers all launchable applications installed on the device.
      */
     suspend fun getInstalledApps(forceRefresh: Boolean = false): List<AppInfo> = withContext(Dispatchers.IO) {
-        if (!forceRefresh && cachedApps != null) {
-            return@withContext cachedApps!!
+        val cached = staticCachedApps
+        if (!forceRefresh && cached != null) {
+            return@withContext cached
         }
 
         val selfPackage = context.packageName
@@ -82,7 +91,7 @@ class AppDiscoveryRepository(private val context: Context) {
                 .thenBy { it.appName.lowercase() }
         )
 
-        cachedApps = sorted
+        staticCachedApps = sorted
         sorted
     }
 }

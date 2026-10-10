@@ -68,6 +68,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -126,7 +127,6 @@ fun HomeScreen(
     var selectedFilter by remember { mutableStateOf(AppFilterTab.UNLOCKED) }
     var showPinSetupDialog by remember { mutableStateOf(false) }
     var pendingLockPackage by remember { mutableStateOf<String?>(null) }
-    var animatingOutPackages by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     // Re-check permissions and restart monitor service if needed on resume
     DisposableEffect(lifecycleOwner) {
@@ -205,16 +205,197 @@ fun HomeScreen(
             showLogo = true
         )
 
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // 2-Way Segmented Toggle for Unlocked & Locked with Smooth Spring Slider Animation
+        val lockedCount = lockedPackages.size
+        val unlockedCount = (installedApps.size - lockedCount).coerceAtLeast(0)
+
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(46.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(SurfaceCard)
+                .border(1.dp, BorderSubtle, RoundedCornerShape(14.dp))
+                .padding(3.dp)
+        ) {
+            val tabWidth = maxWidth / 2
+
+            val indicatorOffset by animateDpAsState(
+                targetValue = if (selectedFilter == AppFilterTab.UNLOCKED) 0.dp else tabWidth,
+                animationSpec = spring(
+                    dampingRatio = 0.82f,
+                    stiffness = Spring.StiffnessMediumLow
+                ),
+                label = "TogglePillOffset"
+            )
+
+            val unlockedContentColor by animateColorAsState(
+                targetValue = if (selectedFilter == AppFilterTab.UNLOCKED) Color(0xFF0A0F1D) else TextSecondary,
+                animationSpec = tween(180),
+                label = "UnlockedColor"
+            )
+            val lockedContentColor by animateColorAsState(
+                targetValue = if (selectedFilter == AppFilterTab.LOCKED) Color(0xFF0A0F1D) else TextSecondary,
+                animationSpec = tween(180),
+                label = "LockedColor"
+            )
+
+            // Sliding Pill Indicator
+            Box(
+                modifier = Modifier
+                    .offset(x = indicatorOffset)
+                    .width(tabWidth)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(ElectricCyan)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Unlocked Tab
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { selectedFilter = AppFilterTab.UNLOCKED },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LockOpen,
+                            contentDescription = null,
+                            tint = unlockedContentColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Unlocked ($unlockedCount)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (selectedFilter == AppFilterTab.UNLOCKED) FontWeight.Bold else FontWeight.Medium,
+                            color = unlockedContentColor,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+
+                // Locked Tab
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { selectedFilter = AppFilterTab.LOCKED },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = lockedContentColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Locked ($lockedCount)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (selectedFilter == AppFilterTab.LOCKED) FontWeight.Bold else FontWeight.Medium,
+                            color = lockedContentColor,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // App Search Bar placed directly under the toggle
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(46.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(SurfaceCard)
+                .border(1.dp, BorderSubtle, RoundedCornerShape(14.dp))
+                .padding(horizontal = 14.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = TextMuted,
+                    modifier = Modifier.size(19.dp)
+                )
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                BasicTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.weight(1f),
+                    textStyle = TextStyle(
+                        color = TextPrimary,
+                        fontSize = 14.sp
+                    ),
+                    cursorBrush = SolidColor(ElectricCyan),
+                    decorationBox = { innerTextField ->
+                        if (searchQuery.isEmpty()) {
+                            Text(
+                                text = "Search installed apps...",
+                                color = TextMuted,
+                                fontSize = 14.sp
+                            )
+                        }
+                        innerTextField()
+                    }
+                )
+
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(
+                        onClick = { searchQuery = "" },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = "Clear",
+                            tint = TextMuted,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            item {
-                Spacer(modifier = Modifier.height(2.dp))
-
-                // In-App Update Banner
-                when (val state = updateState) {
-                    is UpdateState.UpdateAvailable -> {
+            // In-App Update Banner
+            when (val state = updateState) {
+                is UpdateState.UpdateAvailable -> {
+                    item(key = "update_banner") {
                         AppGlassCard(
                             modifier = Modifier.fillMaxWidth(),
                             borderColor = ElectricCyan
@@ -268,9 +449,11 @@ fun HomeScreen(
                                 height = 42.dp
                             )
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
-                    is UpdateState.Downloading -> {
+                }
+                is UpdateState.Downloading -> {
+                    item(key = "downloading_banner") {
                         AppGlassCard(modifier = Modifier.fillMaxWidth()) {
                             Text(
                                 text = "Downloading Update... ${(state.progress * 100).toInt()}%",
@@ -289,9 +472,11 @@ fun HomeScreen(
                                 trackColor = SurfaceCard
                             )
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
-                    is UpdateState.ReadyToInstall -> {
+                }
+                is UpdateState.ReadyToInstall -> {
+                    item(key = "ready_install_banner") {
                         AppGlassCard(modifier = Modifier.fillMaxWidth()) {
                             Text(
                                 text = "Update Ready to Install",
@@ -306,13 +491,15 @@ fun HomeScreen(
                                 height = 42.dp
                             )
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
-                    else -> {}
                 }
+                else -> {}
+            }
 
-                // Action Required Permission Alert Card
-                if (!permissionStatus.isCorePermissionsGranted) {
+            // Action Required Permission Alert Card
+            if (!permissionStatus.isCorePermissionsGranted) {
+                item(key = "permission_banner") {
                     AppGlassCard(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -365,191 +552,12 @@ fun HomeScreen(
                             height = 42.dp
                         )
                     }
-                    Spacer(modifier = Modifier.height(6.dp))
-                }
-
-                // 2-Way Segmented Toggle for Unlocked & Locked with Smooth Spring Slider Animation
-                val lockedCount = lockedPackages.size
-                val unlockedCount = (installedApps.size - lockedCount).coerceAtLeast(0)
-
-                BoxWithConstraints(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(SurfaceCard)
-                        .border(1.dp, BorderSubtle, RoundedCornerShape(14.dp))
-                        .padding(4.dp)
-                ) {
-                    val tabWidth = maxWidth / 2
-
-                    val indicatorOffset by animateDpAsState(
-                        targetValue = if (selectedFilter == AppFilterTab.UNLOCKED) 0.dp else tabWidth,
-                        animationSpec = spring(
-                            dampingRatio = 0.82f,
-                            stiffness = Spring.StiffnessMediumLow
-                        ),
-                        label = "TogglePillOffset"
-                    )
-
-                    val unlockedContentColor by animateColorAsState(
-                        targetValue = if (selectedFilter == AppFilterTab.UNLOCKED) Color(0xFF0A0F1D) else TextSecondary,
-                        animationSpec = tween(200),
-                        label = "UnlockedColor"
-                    )
-                    val lockedContentColor by animateColorAsState(
-                        targetValue = if (selectedFilter == AppFilterTab.LOCKED) Color(0xFF0A0F1D) else TextSecondary,
-                        animationSpec = tween(200),
-                        label = "LockedColor"
-                    )
-
-                    // Sliding Pill Indicator
-                    Box(
-                        modifier = Modifier
-                            .offset(x = indicatorOffset)
-                            .width(tabWidth)
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(ElectricCyan)
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        // Unlocked Tab
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .clip(RoundedCornerShape(10.dp))
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) { selectedFilter = AppFilterTab.UNLOCKED },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.LockOpen,
-                                    contentDescription = null,
-                                    tint = unlockedContentColor,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Unlocked ($unlockedCount)",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = if (selectedFilter == AppFilterTab.UNLOCKED) FontWeight.Bold else FontWeight.Medium,
-                                    color = unlockedContentColor,
-                                    fontSize = 13.sp
-                                )
-                            }
-                        }
-
-                        // Locked Tab
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .clip(RoundedCornerShape(10.dp))
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) { selectedFilter = AppFilterTab.LOCKED },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Lock,
-                                    contentDescription = null,
-                                    tint = lockedContentColor,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Locked ($lockedCount)",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = if (selectedFilter == AppFilterTab.LOCKED) FontWeight.Bold else FontWeight.Medium,
-                                    color = lockedContentColor,
-                                    fontSize = 13.sp
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // App Search Bar placed directly under the toggle
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(SurfaceCard)
-                        .border(1.dp, BorderSubtle, RoundedCornerShape(14.dp))
-                        .padding(horizontal = 14.dp),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = TextMuted,
-                            modifier = Modifier.size(20.dp)
-                        )
-
-                        Spacer(modifier = Modifier.width(10.dp))
-
-                        BasicTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            modifier = Modifier.weight(1f),
-                            textStyle = TextStyle(
-                                color = TextPrimary,
-                                fontSize = 14.sp
-                            ),
-                            cursorBrush = SolidColor(ElectricCyan),
-                            decorationBox = { innerTextField ->
-                                if (searchQuery.isEmpty()) {
-                                    Text(
-                                        text = "Search installed apps...",
-                                        color = TextMuted,
-                                        fontSize = 14.sp
-                                    )
-                                }
-                                innerTextField()
-                            }
-                        )
-
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(
-                                onClick = { searchQuery = "" },
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Clear,
-                                    contentDescription = "Clear",
-                                    tint = TextMuted,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                    }
+                    Spacer(modifier = Modifier.height(4.dp))
                 }
             }
 
             if (isLoadingApps) {
-                item {
+                item(key = "loading_apps") {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -564,7 +572,7 @@ fun HomeScreen(
                     }
                 }
             } else if (filteredApps.isEmpty()) {
-                item {
+                item(key = "empty_apps") {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -579,49 +587,39 @@ fun HomeScreen(
                     }
                 }
             } else {
-                items(filteredApps, key = { it.packageName }) { app ->
+                items(
+                    items = filteredApps,
+                    key = { it.packageName },
+                    contentType = { "app_item" }
+                ) { app ->
                     val isLocked = lockedPackages.contains(app.packageName)
-                    val isExiting = animatingOutPackages.contains(app.packageName)
 
-                    AnimatedVisibility(
-                        visible = !isExiting,
-                        enter = fadeIn(animationSpec = tween(180)),
-                        exit = slideOutHorizontally(
-                            targetOffsetX = { fullWidth -> if (isLocked) -fullWidth else fullWidth },
-                            animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing)
-                        ) + fadeOut(animationSpec = tween(220)) + shrinkVertically(animationSpec = tween(280)),
-                        modifier = Modifier.animateItem()
-                    ) {
-                        AppListItem(
-                            app = app,
-                            isLocked = isLocked,
-                            onToggleLock = {
-                                coroutineScope.launch {
-                                    val hasSecurity = preferencesDataSource.hasSecurityConfiguredFlow.first()
-                                    if (!hasSecurity && !isLocked) {
-                                        // Needs PIN/Pattern setup first!
-                                        pendingLockPackage = app.packageName
-                                        showPinSetupDialog = true
-                                    } else {
-                                        animatingOutPackages = animatingOutPackages + app.packageName
-                                        delay(260)
-                                        preferencesDataSource.setPackageLocked(app.packageName, !isLocked)
-                                        if (!isLocked) {
-                                            preferencesDataSource.setAppMonitorActive(true)
-                                            if (permissionStatus.isCorePermissionsGranted) {
-                                                AppMonitorService.start(context)
-                                            }
+                    AppListItem(
+                        app = app,
+                        isLocked = isLocked,
+                        onToggleLock = {
+                            coroutineScope.launch {
+                                val hasSecurity = preferencesDataSource.hasSecurityConfiguredFlow.first()
+                                if (!hasSecurity && !isLocked) {
+                                    pendingLockPackage = app.packageName
+                                    showPinSetupDialog = true
+                                } else {
+                                    preferencesDataSource.setPackageLocked(app.packageName, !isLocked)
+                                    if (!isLocked) {
+                                        preferencesDataSource.setAppMonitorActive(true)
+                                        if (permissionStatus.isCorePermissionsGranted) {
+                                            AppMonitorService.start(context)
                                         }
-                                        animatingOutPackages = animatingOutPackages - app.packageName
                                     }
                                 }
                             }
-                        )
-                    }
+                        },
+                        modifier = Modifier.animateItem()
+                    )
                 }
             }
 
-            item {
+            item(key = "bottom_spacer") {
                 Spacer(modifier = Modifier.height(80.dp))
             }
         }
@@ -632,13 +630,21 @@ fun HomeScreen(
 private fun AppListItem(
     app: AppInfo,
     isLocked: Boolean,
-    onToggleLock: () -> Unit
+    onToggleLock: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    AppGlassCard(
-        modifier = Modifier
+    Box(
+        modifier = modifier
             .fillMaxWidth()
-            .clickable { onToggleLock() },
-        borderColor = if (isLocked) ElectricCyan.copy(alpha = 0.45f) else null
+            .clip(RoundedCornerShape(14.dp))
+            .background(SurfaceCard)
+            .border(
+                width = 1.dp,
+                color = if (isLocked) ElectricCyan.copy(alpha = 0.5f) else BorderSubtle.copy(alpha = 0.55f),
+                shape = RoundedCornerShape(14.dp)
+            )
+            .clickable(onClick = onToggleLock)
+            .padding(horizontal = 14.dp, vertical = 11.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -651,29 +657,29 @@ private fun AppListItem(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(46.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(SurfaceCard)
-                        .border(1.dp, BorderSubtle.copy(alpha = 0.6f), RoundedCornerShape(12.dp)),
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(Color(0xFFF1F5F9))
+                        .border(1.dp, BorderSubtle.copy(alpha = 0.4f), RoundedCornerShape(11.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     if (app.iconBitmap != null) {
                         Image(
                             bitmap = app.iconBitmap,
-                            contentDescription = app.appName,
-                            modifier = Modifier.size(36.dp)
+                            contentDescription = null,
+                            modifier = Modifier.size(34.dp)
                         )
                     } else {
                         Icon(
                             imageVector = Icons.Default.Shield,
                             contentDescription = null,
                             tint = ElectricCyan,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.width(14.dp))
+                Spacer(modifier = Modifier.width(13.dp))
 
                 Text(
                     text = app.appName,
@@ -681,6 +687,7 @@ private fun AppListItem(
                     fontWeight = FontWeight.SemiBold,
                     color = TextPrimary,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     fontSize = 15.sp
                 )
             }
@@ -690,12 +697,12 @@ private fun AppListItem(
             // Padlock Lock Toggle Icon Button
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(38.dp)
                     .clip(CircleShape)
-                    .background(if (isLocked) ElectricCyan else SurfaceCard)
+                    .background(if (isLocked) ElectricCyan else Color(0xFFF1F5F9))
                     .border(
                         1.dp,
-                        if (isLocked) ElectricCyan else BorderSubtle,
+                        if (isLocked) ElectricCyan else BorderSubtle.copy(alpha = 0.65f),
                         CircleShape
                     ),
                 contentAlignment = Alignment.Center
@@ -703,8 +710,8 @@ private fun AppListItem(
                 Icon(
                     imageVector = if (isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
                     contentDescription = if (isLocked) "Locked" else "Unlocked",
-                    tint = if (isLocked) Color(0xFF0A0F1D) else TextMuted,
-                    modifier = Modifier.size(20.dp)
+                    tint = if (isLocked) Color.White else TextMuted,
+                    modifier = Modifier.size(19.dp)
                 )
             }
         }

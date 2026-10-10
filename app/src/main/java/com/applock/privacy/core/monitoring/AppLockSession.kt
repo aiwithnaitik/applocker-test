@@ -15,6 +15,7 @@ object AppLockSession {
     @Volatile var currentLockShowingPackage: String? = null
     @Volatile var activeUnlockedPackage: String? = null
     @Volatile var lastUnlockTimestamp: Long = 0L
+    @Volatile var isAppInForeground: Boolean = false
 
     /** Grace window (in milliseconds) immediately following a successful unlock */
     const val POST_UNLOCK_GRACE_PERIOD_MS = 2500L
