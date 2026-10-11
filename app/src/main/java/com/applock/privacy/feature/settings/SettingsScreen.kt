@@ -632,7 +632,7 @@ fun SettingsScreen(
                         )
                     }
                     Icon(
-                        imageVector = if (isAlarmPlaying) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                        imageVector = if (isAlarmPlaying) Icons.Default.VolumeOff else Icons.Default.NotificationsActive,
                         contentDescription = null,
                         tint = if (isAlarmPlaying) RoseDestructive else ElectricCyan,
                         modifier = Modifier.size(24.dp)

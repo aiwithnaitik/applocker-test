@@ -59,7 +59,7 @@ object IntruderCaptureManager {
             }
 
             // Determine valid JPEG resolution from device's supported stream configuration map
-            val map = frontCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+            val map = frontCharacteristics?.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
             val sizes = map?.getOutputSizes(ImageFormat.JPEG) ?: emptyArray()
             val chosenSize: Size = sizes.firstOrNull { it.width in 480..1280 }
                 ?: sizes.firstOrNull()

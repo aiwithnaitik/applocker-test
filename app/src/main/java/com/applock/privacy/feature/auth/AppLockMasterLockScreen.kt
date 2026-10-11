@@ -1,6 +1,6 @@
 package com.applock.privacy.feature.auth
 
-import android.app.Activity
+import androidx.fragment.app.FragmentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,7 +36,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.applock.privacy.core.biometric.BiometricHelper
+import com.applock.privacy.core.security.BiometricHelper
 import com.applock.privacy.core.security.AuthResult
 import com.applock.privacy.core.security.SecurityManager
 import com.applock.privacy.core.theme.AppThemeCatalog
@@ -70,7 +70,7 @@ fun AppLockMasterLockScreen(
 
     // Auto-prompt biometric on launch if enabled and supported
     LaunchedEffect(Unit) {
-        val activity = context as? Activity
+        val activity = context as? FragmentActivity
         if (activity != null && isBiometricEnabled && BiometricHelper.isBiometricAvailable(activity)) {
             BiometricHelper.showBiometricPrompt(
                 activity = activity,
@@ -78,7 +78,7 @@ fun AppLockMasterLockScreen(
                 subtitle = "Verify fingerprint or face to open AppLock",
                 negativeButtonText = "Use Pass",
                 onSuccess = onUnlockSuccess,
-                onError = {}
+                onError = { /* ignored on auto-prompt */ }
             )
         }
     }
@@ -220,7 +220,7 @@ fun AppLockMasterLockScreen(
                         }
                     },
                     onBiometricClick = {
-                        val activity = context as? Activity ?: return@PinKeypad
+                        val activity = context as? FragmentActivity ?: return@PinKeypad
                         if (BiometricHelper.isBiometricAvailable(activity)) {
                             BiometricHelper.showBiometricPrompt(
                                 activity = activity,
@@ -228,7 +228,7 @@ fun AppLockMasterLockScreen(
                                 subtitle = "Verify biometric identity",
                                 negativeButtonText = "Use PIN",
                                 onSuccess = onUnlockSuccess,
-                                onError = { err -> errorMessage = err }
+                                onError = { err: String -> errorMessage = err }
                             )
                         }
                     }
