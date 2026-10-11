@@ -42,9 +42,10 @@ import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material.icons.filled.WorkspacePremium
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -87,9 +88,9 @@ import com.applock.privacy.core.ui.theme.TextPrimary
 import com.applock.privacy.core.ui.theme.TextSecondary
 import com.applock.privacy.core.updater.AppUpdateManager
 import com.applock.privacy.core.updater.UpdateState
+import com.applock.privacy.core.monitoring.AppLockSession
 import com.applock.privacy.data.local.AppPreferencesDataSource
-import com.applock.privacy.feature.auth.PatternSetupDialog
-import com.applock.privacy.feature.auth.PinSetupDialog
+import com.applock.privacy.feature.auth.SecuritySetupDialog
 import kotlinx.coroutines.launch
 
 @Composable
@@ -114,15 +115,15 @@ fun SettingsScreen(
     val hasPinConfigured by preferencesDataSource.hasPinConfiguredFlow.collectAsState(initial = false)
     val hasPatternConfigured by preferencesDataSource.hasPatternConfiguredFlow.collectAsState(initial = false)
     val lockType by preferencesDataSource.lockTypeFlow.collectAsState(initial = "pin")
+    val pinLength by preferencesDataSource.pinLengthFlow.collectAsState(initial = 4)
 
     // Phase 14: Customization
     val isPatternVisible by preferencesDataSource.isPatternVisibleFlow.collectAsState(initial = true)
-    val isHapticEnabled by preferencesDataSource.isHapticEnabledFlow.collectAsState(initial = true)
     val relockImmediately by preferencesDataSource.relockImmediatelyFlow.collectAsState(initial = true)
 
     // Phase 15: Lockout Protection
     val failedThreshold by preferencesDataSource.failedAttemptThresholdFlow.collectAsState(initial = 3)
-    val lockoutDuration by preferencesDataSource.lockoutDurationSecondsFlow.collectAsState(initial = 60)
+    val lockoutDuration by preferencesDataSource.lockoutDurationSecondsFlow.collectAsState(initial = -1)
 
     // Phase 16: Intruder Detection
     val isIntruderEnabled by preferencesDataSource.isIntruderDetectionEnabledFlow.collectAsState(initial = false)
@@ -136,17 +137,16 @@ fun SettingsScreen(
     val isAlarmPlaying by AlarmPlayer.isAlarmActive.collectAsState()
 
     // Phase 18 & 19
-    val isNotificationShieldEnabled by preferencesDataSource.isNotificationShieldEnabledFlow.collectAsState(initial = false)
     val isWebsiteBlockerEnabled by preferencesDataSource.isWebsiteBlockerEnabledFlow.collectAsState(initial = true)
 
-    var showPinDialog by remember { mutableStateOf(false) }
-    var showPatternDialog by remember { mutableStateOf(false) }
+    var showSecurityDialog by remember { mutableStateOf(false) }
     var permissionStatus by remember { mutableStateOf(PermissionManager.getPermissionStatus(context)) }
     val scrollState = rememberScrollState()
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
+        AppLockSession.setTransientSystemAction(false)
         coroutineScope.launch {
             preferencesDataSource.setIntruderDetectionEnabled(isGranted)
         }
@@ -176,15 +176,7 @@ fun SettingsScreen(
             showLogo = false
         )
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Luxury Upgrade to AppLock Pro Card
-        ProVipSettingsCard(
-            isProUser = isProUser,
-            onClick = onNavigateToProSubscription
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         // Authentication & Security
         Text(
@@ -199,7 +191,7 @@ fun SettingsScreen(
         AppGlassCard(modifier = Modifier.fillMaxWidth()) {
             SettingNavigationItem(
                 title = "Stealth Disguise Decoy",
-                subtitle = "Conceal lock screen behind Crash alert or Calculator",
+                subtitle = "Conceal lock screen behind fake Crash alert",
                 icon = Icons.Default.VisibilityOff,
                 onClick = onNavigateToDisguiseCover
             )
@@ -209,21 +201,14 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(10.dp))
 
             SettingNavigationItem(
-                title = if (hasPinConfigured) "Change Security PIN" else "Set Security PIN",
-                subtitle = if (hasPinConfigured) "Salted SHA-256 PIN active" else "Configure master PIN",
-                icon = Icons.Default.Pin,
-                onClick = { showPinDialog = true }
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-            Divider(color = BorderSubtle.copy(alpha = 0.5f))
-            Spacer(modifier = Modifier.height(10.dp))
-
-            SettingNavigationItem(
-                title = if (hasPatternConfigured) "Change Lock Pattern" else "Set Lock Pattern",
-                subtitle = if (hasPatternConfigured) "Interactive 3x3 pattern active" else "Configure stealth unlock pattern",
-                icon = Icons.Default.Grid3x3,
-                onClick = { showPatternDialog = true }
+                title = "Lock Type & Passcode",
+                subtitle = when {
+                    hasPatternConfigured -> "Active • Pattern Lock (Tap to change)"
+                    hasPinConfigured -> "Active • $pinLength-Digit PIN (Tap to change)"
+                    else -> "Configure single security lock"
+                },
+                icon = Icons.Default.Shield,
+                onClick = { showSecurityDialog = true }
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -241,53 +226,6 @@ fun SettingsScreen(
                     }
                 }
             )
-
-            Spacer(modifier = Modifier.height(10.dp))
-            Divider(color = BorderSubtle.copy(alpha = 0.5f))
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        coroutineScope.launch {
-                            val next = if (lockType == "pin") "pattern" else "pin"
-                            preferencesDataSource.setLockType(next)
-                        }
-                    }
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = null,
-                        tint = ElectricCyan,
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Column {
-                        Text(
-                            text = "Default Lock Screen Mode",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
-                        )
-                        Text(
-                            text = "Preferred style: ${lockType.uppercase()}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextMuted,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-
-                AppStatusBadge(
-                    text = lockType.uppercase(),
-                    isPositive = true
-                )
-            }
         }
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -311,22 +249,6 @@ fun SettingsScreen(
                 onCheckedChange = { hideLines ->
                     coroutineScope.launch {
                         preferencesDataSource.setPatternVisible(!hideLines)
-                    }
-                }
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-            Divider(color = BorderSubtle.copy(alpha = 0.5f))
-            Spacer(modifier = Modifier.height(10.dp))
-
-            SettingToggleItem(
-                title = "Tactile Haptics",
-                subtitle = "Vibrate on keypad clicks and pattern nodes",
-                icon = Icons.Default.Vibration,
-                checked = isHapticEnabled,
-                onCheckedChange = { enabled ->
-                    coroutineScope.launch {
-                        preferencesDataSource.setHapticEnabled(enabled)
                     }
                 }
             )
@@ -361,77 +283,139 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(10.dp))
 
         AppGlassCard(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        coroutineScope.launch {
-                            val nextThreshold = when (failedThreshold) {
-                                3 -> 5
-                                5 -> 10
-                                else -> 3
-                            }
-                            preferencesDataSource.setFailedAttemptThreshold(nextThreshold)
-                        }
+            var showAttemptDropdown by remember { mutableStateOf(false) }
+
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showAttemptDropdown = true }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Lockout Attempt Threshold",
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary,
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            text = "Lock out after $failedThreshold incorrect attempts",
+                            color = TextMuted,
+                            fontSize = 12.sp
+                        )
                     }
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text = "Lockout Attempt Threshold",
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary,
-                        fontSize = 15.sp
-                    )
-                    Text(
-                        text = "Lock out after $failedThreshold incorrect attempts",
-                        color = TextMuted,
-                        fontSize = 12.sp
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        AppStatusBadge(text = "$failedThreshold Attempts", isPositive = true)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = null,
+                            tint = ElectricCyan
+                        )
+                    }
                 }
-                AppStatusBadge(text = "$failedThreshold Attempts", isPositive = true)
+
+                DropdownMenu(
+                    expanded = showAttemptDropdown,
+                    onDismissRequest = { showAttemptDropdown = false }
+                ) {
+                    (1..10).forEach { attempt ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = "$attempt Attempt${if (attempt > 1) "s" else ""}",
+                                    color = if (failedThreshold == attempt) ElectricCyan else TextPrimary,
+                                    fontWeight = if (failedThreshold == attempt) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            onClick = {
+                                showAttemptDropdown = false
+                                coroutineScope.launch {
+                                    preferencesDataSource.setFailedAttemptThreshold(attempt)
+                                }
+                            }
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
             Divider(color = BorderSubtle.copy(alpha = 0.5f))
             Spacer(modifier = Modifier.height(10.dp))
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        coroutineScope.launch {
-                            val nextDuration = when (lockoutDuration) {
-                                30 -> 60
-                                60 -> 300
-                                else -> 30
-                            }
-                            preferencesDataSource.setLockoutDurationSeconds(nextDuration)
-                        }
+            var showDurationDropdown by remember { mutableStateOf(false) }
+            val durationOptions = listOf(
+                -1 to "Smart Lockout (Auto: 1m, 5m)",
+                1 to "1 second",
+                10 to "10 seconds",
+                20 to "20 seconds",
+                30 to "30 seconds",
+                50 to "50 seconds",
+                60 to "60 seconds",
+                120 to "120 seconds"
+            )
+
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDurationDropdown = true }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Lockout Cooldown Duration",
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary,
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            text = if (lockoutDuration == -1) "Smart Lockout: auto-scales from 1m to 5m+" else "$lockoutDuration seconds cooldown",
+                            color = TextMuted,
+                            fontSize = 12.sp
+                        )
                     }
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text = "Lockout Cooldown Duration",
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary,
-                        fontSize = 15.sp
-                    )
-                    Text(
-                        text = if (lockoutDuration >= 60) "${lockoutDuration / 60} minute(s)" else "$lockoutDuration seconds",
-                        color = TextMuted,
-                        fontSize = 12.sp
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        AppStatusBadge(
+                            text = if (lockoutDuration == -1) "Smart" else "${lockoutDuration}s",
+                            isPositive = true
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = null,
+                            tint = ElectricCyan
+                        )
+                    }
                 }
-                AppStatusBadge(
-                    text = if (lockoutDuration >= 60) "${lockoutDuration / 60}m" else "${lockoutDuration}s",
-                    isPositive = true
-                )
+
+                DropdownMenu(
+                    expanded = showDurationDropdown,
+                    onDismissRequest = { showDurationDropdown = false }
+                ) {
+                    durationOptions.forEach { (sec, label) ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = label,
+                                    color = if (lockoutDuration == sec) ElectricCyan else TextPrimary,
+                                    fontWeight = if (lockoutDuration == sec) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            onClick = {
+                                showDurationDropdown = false
+                                coroutineScope.launch {
+                                    preferencesDataSource.setLockoutDurationSeconds(sec)
+                                }
+                            }
+                        )
+                    }
+                }
             }
         }
 
@@ -455,6 +439,7 @@ fun SettingsScreen(
                 checked = isIntruderEnabled,
                 onCheckedChange = { enabled ->
                     if (enabled) {
+                        AppLockSession.setTransientSystemAction(true)
                         cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                     } else {
                         coroutineScope.launch {
@@ -670,17 +655,6 @@ fun SettingsScreen(
 
         AppGlassCard(modifier = Modifier.fillMaxWidth()) {
             SettingNavigationItem(
-                title = "Notification Shield",
-                subtitle = if (isNotificationShieldEnabled) "Enabled • Conceals sensitive notifications" else "Disabled",
-                icon = Icons.Default.NotificationsActive,
-                onClick = onNavigateToNotificationShield
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-            Divider(color = BorderSubtle.copy(alpha = 0.5f))
-            Spacer(modifier = Modifier.height(10.dp))
-
-            SettingNavigationItem(
                 title = "Website Blocker",
                 subtitle = if (isWebsiteBlockerEnabled) "Active • Browser domain interceptor" else "Disabled",
                 icon = Icons.Default.Public,
@@ -830,226 +804,12 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(26.dp))
     }
 
-    if (showPinDialog) {
-        PinSetupDialog(
+    if (showSecurityDialog) {
+        SecuritySetupDialog(
             preferencesDataSource = preferencesDataSource,
-            onDismissRequest = { showPinDialog = false },
-            onPinCreated = { showPinDialog = false }
+            onDismissRequest = { showSecurityDialog = false },
+            onSecurityConfigured = { showSecurityDialog = false }
         )
-    }
-
-    if (showPatternDialog) {
-        PatternSetupDialog(
-            preferencesDataSource = preferencesDataSource,
-            onDismissRequest = { showPatternDialog = false },
-            onPatternCreated = { showPatternDialog = false }
-        )
-    }
-}
-
-/**
- * Upgraded Luxury "Upgrade to AppLock Pro" Hero Card
- */
-@Composable
-private fun ProVipSettingsCard(
-    isProUser: Boolean,
-    onClick: () -> Unit
-) {
-    if (isProUser) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(Color(0xFFECFDF5), Color(0xFFF0FDF4), Color(0xFFFFFFFF))
-                    )
-                )
-                .border(1.dp, EmeraldSecure.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
-                .clickable(onClick = onClick)
-                .padding(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(13.dp))
-                            .background(EmeraldSecure.copy(alpha = 0.15f))
-                            .border(1.dp, EmeraldSecure.copy(alpha = 0.35f), RoundedCornerShape(13.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.WorkspacePremium,
-                            contentDescription = null,
-                            tint = EmeraldSecure,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(13.dp))
-
-                    Column {
-                        Text(
-                            text = "AppLock VIP Member",
-                            color = TextPrimary,
-                            fontSize = 15.5.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "All premium protections active & unlocked",
-                            color = TextSecondary,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-
-                AppStatusBadge(
-                    text = "VIP ACTIVE",
-                    color = EmeraldSecure
-                )
-            }
-        }
-    } else {
-        // Luxury Obsidian & Amber-Gold Gradient Pro Showcase Card
-        val goldAccent = Color(0xFFF59E0B)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFF0F172A), // Slate 900
-                            Color(0xFF1E293B), // Slate 800
-                            Color(0xFF191F33)
-                        )
-                    )
-                )
-                .border(
-                    1.2.dp,
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            goldAccent.copy(alpha = 0.6f),
-                            ElectricCyan.copy(alpha = 0.45f),
-                            goldAccent.copy(alpha = 0.3f)
-                        )
-                    ),
-                    RoundedCornerShape(20.dp)
-                )
-                .clickable(onClick = onClick)
-                .padding(16.dp)
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                        Box(
-                            modifier = Modifier
-                                .size(46.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(goldAccent.copy(alpha = 0.18f))
-                            .border(1.2.dp, goldAccent.copy(alpha = 0.5f), RoundedCornerShape(14.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.WorkspacePremium,
-                                contentDescription = null,
-                                tint = Color(0xFFFBBF24),
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(13.dp))
-
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "Upgrade to AppLock Pro",
-                                    color = Color.White,
-                                    fontSize = 15.5.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.width(7.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .clip(PillShape)
-                                        .background(goldAccent)
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = "VIP",
-                                        color = Color(0xFF0F172A),
-                                        fontSize = 9.5.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Unlock Decoy Covers, unlimited custom themes & VIP tools",
-                                color = Color(0xFF94A3B8),
-                                fontSize = 11.5.sp
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .clip(PillShape)
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(Color(0xFFF59E0B), Color(0xFFD97706))
-                                )
-                            )
-                            .padding(horizontal = 11.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "UPGRADE →",
-                            color = Color.White,
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Feature Highlights Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    val features = listOf("✦ Decoys", "✦ Themes", "✦ Siren", "✦ No Ads")
-                    for (f in features) {
-                        Box(
-                            modifier = Modifier
-                                .clip(PillShape)
-                                .background(Color(0xFF334155).copy(alpha = 0.5f))
-                                .border(0.8.dp, Color(0xFF475569), PillShape)
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                            Text(
-                                text = f,
-                                color = Color(0xFFE2E8F0),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 

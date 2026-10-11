@@ -16,6 +16,8 @@ object AppLockSession {
     @Volatile var activeUnlockedPackage: String? = null
     @Volatile var lastUnlockTimestamp: Long = 0L
     @Volatile var isAppInForeground: Boolean = false
+    @Volatile var isTransientSystemAction: Boolean = false
+    @Volatile var isAppLockAuthenticated: Boolean = false
 
     /** Grace window (in milliseconds) immediately following a successful unlock */
     const val POST_UNLOCK_GRACE_PERIOD_MS = 2500L
@@ -23,6 +25,10 @@ object AppLockSession {
     fun setLockActivityShowing(showing: Boolean, packageName: String? = null) {
         isLockActivityShowing = showing
         currentLockShowingPackage = if (showing) packageName else null
+    }
+
+    fun setTransientSystemAction(active: Boolean) {
+        isTransientSystemAction = active
     }
 
     fun unlockPackage(packageName: String) {
@@ -63,8 +69,16 @@ object AppLockSession {
         if (packageName == "com.android.documentsui" || packageName == "com.google.android.documentsui") return true
         if (packageName == "com.google.android.packageinstaller" || packageName == "com.android.packageinstaller") return true
 
-        // Virtual keyboards and IMEs
         val lower = packageName.lowercase()
+        // Media provider modules & photo pickers
+        if (lower.contains("providers.media") ||
+            lower.contains("photopicker") ||
+            lower.contains("mediaprovider") ||
+            lower.contains("documentsui") ||
+            lower.contains("permissioncontroller")
+        ) return true
+
+        // Virtual keyboards and IMEs
         if (lower.contains("inputmethod") ||
             lower.contains("keyboard") ||
             lower.contains("honeyboard") ||
@@ -115,7 +129,7 @@ object AppLockSession {
         launcherPackages: Set<String> = emptySet(),
         ownPackageName: String = "com.applock.privacy"
     ) {
-        if (isGracePeriodActive()) return
+        if (isGracePeriodActive() || isTransientSystemAction) return
         if (isSystemOrTransientPackage(newForegroundPackage, ownPackageName)) return
 
         val current = activeUnlockedPackage ?: return

@@ -95,7 +95,7 @@ import com.applock.privacy.core.updater.UpdateState
 import com.applock.privacy.data.local.AppPreferencesDataSource
 import com.applock.privacy.data.model.AppInfo
 import com.applock.privacy.data.repository.AppDiscoveryRepository
-import com.applock.privacy.feature.auth.PinSetupDialog
+import com.applock.privacy.feature.auth.SecuritySetupDialog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -173,13 +173,13 @@ fun HomeScreen(
     }
 
     if (showPinSetupDialog) {
-        PinSetupDialog(
+        SecuritySetupDialog(
             preferencesDataSource = preferencesDataSource,
             onDismissRequest = {
                 showPinSetupDialog = false
                 pendingLockPackage = null
             },
-            onPinCreated = {
+            onSecurityConfigured = {
                 showPinSetupDialog = false
                 pendingLockPackage?.let { pkg ->
                     coroutineScope.launch {

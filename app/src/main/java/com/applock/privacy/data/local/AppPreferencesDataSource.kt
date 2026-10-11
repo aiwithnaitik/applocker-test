@@ -169,7 +169,7 @@ class AppPreferencesDataSource(private val context: Context) {
     }
 
     val lockoutDurationSecondsFlow: Flow<Int> = context.dataStore.data.map { preferences ->
-        preferences[KEY_LOCKOUT_DURATION_SECONDS] ?: 60
+        preferences[KEY_LOCKOUT_DURATION_SECONDS] ?: -1
     }
 
     // Phase 16: Intruder Detection
@@ -447,8 +447,18 @@ class AppPreferencesDataSource(private val context: Context) {
 
             val threshold = preferences[KEY_FAILED_ATTEMPT_THRESHOLD] ?: 3
             if (newCount >= threshold) {
-                val durationSec = preferences[KEY_LOCKOUT_DURATION_SECONDS] ?: 60
-                val lockoutUntil = System.currentTimeMillis() + (durationSec * 1000L)
+                val durationSec = preferences[KEY_LOCKOUT_DURATION_SECONDS] ?: -1
+                val effectiveSec = if (durationSec == -1) {
+                    val excess = maxOf(0, newCount - threshold)
+                    when {
+                        excess >= 4 -> 600 // 10 minutes
+                        excess >= 2 -> 300 // 5 minutes
+                        else -> 60         // 1 minute
+                    }
+                } else {
+                    durationSec
+                }
+                val lockoutUntil = System.currentTimeMillis() + (effectiveSec * 1000L)
                 preferences[KEY_LOCKOUT_UNTIL_TIMESTAMP] = lockoutUntil
                 isLockedOut = true
             }

@@ -75,17 +75,14 @@ fun ThemesScreen(
     val preferencesDataSource = remember { AppPreferencesDataSource(context) }
 
     val persistedThemeId by preferencesDataSource.selectedThemeIdFlow.collectAsState(initial = "pure_light")
-    val isSmartThemeEnabled by preferencesDataSource.isSmartThemeEnabledFlow.collectAsState(initial = false)
     val customThemes by preferencesDataSource.customThemesFlow.collectAsState(initial = emptyList())
     val isProUser by preferencesDataSource.isProUserFlow.collectAsState(initial = false)
 
-    var previewThemeId by remember { mutableStateOf(persistedThemeId) }
     var showCreateDialog by remember { mutableStateOf(false) }
     var selectedCategoryForSheet by remember { mutableStateOf<ThemeCategory?>(null) }
 
-    val activeTheme = remember(previewThemeId, persistedThemeId, customThemes) {
-        val targetId = if (previewThemeId.isNotEmpty()) previewThemeId else persistedThemeId
-        AppThemeCatalog.getThemeById(targetId, customThemes)
+    val activeTheme = remember(persistedThemeId, customThemes) {
+        AppThemeCatalog.getThemeById(persistedThemeId, customThemes)
     }
 
     val scrollState = rememberScrollState()
@@ -117,7 +114,7 @@ fun ThemesScreen(
                     .padding(end = 12.dp)
             ) {
                 Text(
-                    text = if (isSmartThemeEnabled) "Smart\nTheme" else "Standard\nTheme",
+                    text = "Current Theme\n${activeTheme.name}",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color = TextPrimary,
@@ -137,31 +134,40 @@ fun ThemesScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Smart Theme Radio Option
-                ThemeRadioOption(
-                    title = "Smart Theme",
-                    isSelected = isSmartThemeEnabled,
-                    isVip = true,
-                    onClick = {
-                        coroutineScope.launch {
-                            preferencesDataSource.setSmartThemeEnabled(true)
+                // Active Theme Card Info
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(SurfaceCard)
+                        .border(1.dp, BorderSubtle.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+                        .padding(12.dp)
+                ) {
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(ElectricCyan)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Active Theme",
+                                color = ElectricCyan,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = activeTheme.description,
+                            color = TextSecondary,
+                            fontSize = 11.5.sp,
+                            lineHeight = 15.sp
+                        )
                     }
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Standard Theme Radio Option
-                ThemeRadioOption(
-                    title = "Standard Theme",
-                    isSelected = !isSmartThemeEnabled,
-                    isVip = false,
-                    onClick = {
-                        coroutineScope.launch {
-                            preferencesDataSource.setSmartThemeEnabled(false)
-                        }
-                    }
-                )
+                }
             }
 
             // Right Column: Phone Mockup Frame
@@ -184,7 +190,7 @@ fun ThemesScreen(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = if (isSmartThemeEnabled) "Smart Active" else "Current Theme",
+                        text = "Current Theme",
                         color = ElectricCyan,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold
@@ -296,8 +302,6 @@ fun ThemesScreen(
             onSelectTheme = { theme ->
                 coroutineScope.launch {
                     preferencesDataSource.setSelectedTheme(theme.id)
-                    preferencesDataSource.setSmartThemeEnabled(false)
-                    previewThemeId = theme.id
                     selectedCategoryForSheet = null
                 }
             }
@@ -310,75 +314,9 @@ fun ThemesScreen(
             onSaveTheme = { config ->
                 coroutineScope.launch {
                     preferencesDataSource.saveCustomTheme(config)
-                    preferencesDataSource.setSmartThemeEnabled(false)
-                    previewThemeId = config.id
                 }
             }
         )
-    }
-}
-
-/**
- * Radio button row option matching screenshot design.
- */
-@Composable
-private fun ThemeRadioOption(
-    title: String,
-    isSelected: Boolean,
-    isVip: Boolean,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) ElectricCyan.copy(alpha = 0.08f) else Color.Transparent)
-            .border(
-                1.dp,
-                if (isSelected) ElectricCyan.copy(alpha = 0.6f) else BorderSubtle.copy(alpha = 0.4f),
-                RoundedCornerShape(12.dp)
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = if (isSelected) Icons.Default.RadioButtonChecked else Icons.Default.RadioButtonUnchecked,
-                contentDescription = null,
-                tint = if (isSelected) ElectricCyan else TextMuted,
-                modifier = Modifier.size(18.dp)
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) ElectricCyan else TextPrimary,
-                fontSize = 13.5.sp
-            )
-
-            if (isVip) {
-                Spacer(modifier = Modifier.width(6.dp))
-                Box(
-                    modifier = Modifier
-                        .clip(PillShape)
-                        .background(Color(0xFFF59E0B))
-                        .padding(horizontal = 5.dp, vertical = 1.5.dp)
-                ) {
-                    Text(
-                        text = "VIP",
-                        color = Color(0xFF0F172A),
-                        fontSize = 8.5.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
     }
 }
 

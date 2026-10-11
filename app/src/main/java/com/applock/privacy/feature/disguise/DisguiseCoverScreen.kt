@@ -91,12 +91,6 @@ fun DisguiseCoverScreen(
         return
     }
 
-    if (previewMode == DisguiseMode.CALCULATOR) {
-        CalculatorDecoyCover(
-            onBypass = { previewMode = null }
-        )
-        return
-    }
 
     val scrollState = rememberScrollState()
 
@@ -190,57 +184,6 @@ fun DisguiseCoverScreen(
             }
         )
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Option 3: Calculator Decoy
-        DecoyOptionCard(
-            mode = DisguiseMode.CALCULATOR,
-            isSelected = selectedMode == DisguiseMode.CALCULATOR,
-            icon = Icons.Default.Calculate,
-            iconTint = ElectricCyan,
-            onClick = {
-                scope.launch { preferencesDataSource.setDisguiseMode(DisguiseMode.CALCULATOR.id) }
-            },
-            onPreview = {
-                previewMode = DisguiseMode.CALCULATOR
-            }
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Target Scope Setting
-        AppCard {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "AppLock Only",
-                        color = TextPrimary,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "Apply disguise cover only to AppLock itself. Other protected apps will show the normal lock screen.",
-                        color = TextSecondary,
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                AppSwitch(
-                    checked = isAppLockOnly,
-                    onCheckedChange = { checked ->
-                        scope.launch { preferencesDataSource.setDisguiseAppLockOnly(checked) }
-                    }
-                )
-            }
-        }
-
         Spacer(modifier = Modifier.height(20.dp))
 
         // Secret Bypass Guidance
@@ -254,7 +197,7 @@ fun DisguiseCoverScreen(
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "• Fake Crash Dialog: Long-press 'Close app' for 1.5 seconds, or tap the error title 3 times.\n• Calculator Decoy: Type your PIN and tap '=' to unlock seamlessly.\n• Normal users tapping 'Close app' or doing math will never see the lock screen.",
+                    text = "• Fake Crash Dialog: Long-press 'Close app' for 1.5 seconds, or tap the error title 3 times.\n• Normal users tapping 'Close app' will be sent to the home screen without ever seeing your lock screen.",
                     color = TextSecondary,
                     fontSize = 12.sp,
                     lineHeight = 18.sp

@@ -3,7 +3,9 @@ package com.applock.privacy.feature.vault
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import com.applock.privacy.core.monitoring.AppLockSession
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -106,10 +108,8 @@ fun MediaVaultScreen(
     val videoItems = remember(allVaultItems) { allVaultItems.filter { it.isVideo } }
     val displayedItems = if (selectedTab == VaultTab.PHOTOS) photoItems else videoItems
 
-    // Image Picker Launcher
-    val mediaPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetMultipleContents()
-    ) { uris: List<Uri> ->
+    val handleImportUris: (List<Uri>) -> Unit = { uris ->
+        AppLockSession.setTransientSystemAction(false)
         if (uris.isNotEmpty()) {
             scope.launch {
                 isImporting = true
@@ -123,6 +123,37 @@ fun MediaVaultScreen(
                     )
                 }
                 isImporting = false
+            }
+        }
+    }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia()
+    ) { uris: List<Uri> ->
+        handleImportUris(uris)
+    }
+
+    val legacyPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris: List<Uri> ->
+        handleImportUris(uris)
+    }
+
+    val launchPicker: () -> Unit = {
+        AppLockSession.setTransientSystemAction(true)
+        val isVideo = selectedTab == VaultTab.VIDEOS
+        try {
+            val request = if (isVideo) {
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)
+            } else {
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            }
+            photoPickerLauncher.launch(request)
+        } catch (_: Throwable) {
+            try {
+                legacyPickerLauncher.launch(if (isVideo) "video/*" else "image/*")
+            } catch (_: Throwable) {
+                AppLockSession.setTransientSystemAction(false)
             }
         }
     }
@@ -190,10 +221,7 @@ fun MediaVaultScreen(
                     description = "Photos and videos placed here are encrypted and completely hidden from your phone's Gallery.",
                     icon = Icons.Default.Lock,
                     actionButtonText = "+ Hide First ${if (selectedTab == VaultTab.PHOTOS) "Photo" else "Video"}",
-                    onActionClick = {
-                        val mimeType = if (selectedTab == VaultTab.PHOTOS) "image/*" else "video/*"
-                        mediaPickerLauncher.launch(mimeType)
-                    }
+                    onActionClick = launchPicker
                 )
             } else {
                 LazyVerticalGrid(
@@ -214,10 +242,7 @@ fun MediaVaultScreen(
 
         // Floating Action Button to Import
         FloatingActionButton(
-            onClick = {
-                val mimeType = if (selectedTab == VaultTab.PHOTOS) "image/*" else "video/*"
-                mediaPickerLauncher.launch(mimeType)
-            },
+            onClick = launchPicker,
             containerColor = BrightAzure,
             contentColor = Color.White,
             modifier = Modifier
@@ -325,7 +350,7 @@ private fun VaultMediaThumbnail(
 
     LaunchedEffect(item.filePath) {
         withContext(Dispatchers.IO) {
-            thumbnailBitmap = MediaVaultManager.loadBitmap(item.filePath)
+            thumbnailBitmap = MediaVaultManager.loadThumbnail(item.filePath, item.isVideo)
         }
     }
 

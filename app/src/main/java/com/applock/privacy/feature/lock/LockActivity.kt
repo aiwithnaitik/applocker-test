@@ -163,41 +163,19 @@ class LockActivity : FragmentActivity() {
                 val lockoutUntil by preferencesDataSource.lockoutUntilTimestampFlow.collectAsState(initial = 0L)
 
                 val disguiseModeStr by preferencesDataSource.disguiseModeFlow.collectAsState(initial = "NONE")
-                val isAppLockOnly by preferencesDataSource.isDisguiseAppLockOnlyFlow.collectAsState(initial = false)
                 var disguiseBypassed by remember { mutableStateOf(false) }
 
                 val disguiseMode = remember(disguiseModeStr) {
                     com.applock.privacy.feature.disguise.DisguiseMode.fromId(disguiseModeStr)
                 }
                 val shouldShowDisguise = !disguiseBypassed &&
-                    disguiseMode != com.applock.privacy.feature.disguise.DisguiseMode.NONE &&
-                    (!isAppLockOnly || targetPackage == packageName)
+                    disguiseMode == com.applock.privacy.feature.disguise.DisguiseMode.CRASH_DIALOG
 
                 if (shouldShowDisguise) {
-                    when (disguiseMode) {
-                        com.applock.privacy.feature.disguise.DisguiseMode.CRASH_DIALOG -> {
-                            com.applock.privacy.feature.disguise.FakeCrashCover(
-                                appName = appName,
-                                onBypass = { disguiseBypassed = true }
-                            )
-                        }
-                        com.applock.privacy.feature.disguise.DisguiseMode.CALCULATOR -> {
-                            com.applock.privacy.feature.disguise.CalculatorDecoyCover(
-                                onBypass = {
-                                    isUnlockedSuccessfully = true
-                                    AlarmPlayer.stop()
-                                    AppLockSession.unlockPackage(targetPackage)
-                                    finish()
-                                },
-                                onVerifyPin = { typedPin ->
-                                    SecurityManager.verifyPin(preferencesDataSource, typedPin)
-                                }
-                            )
-                        }
-                        else -> {
-                            disguiseBypassed = true
-                        }
-                    }
+                    com.applock.privacy.feature.disguise.FakeCrashCover(
+                        appName = appName,
+                        onBypass = { disguiseBypassed = true }
+                    )
                 } else {
                     LockScreenContent(
                         appName = appName,
@@ -484,19 +462,18 @@ private fun LockScreenContent(
                             val result = SecurityManager.verifyPatternWithResult(preferencesDataSource, pattern)
                             when (result) {
                                 is AuthResult.Success -> {
-                                    if (isHapticEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     onUnlockSuccess()
                                 }
                                 is AuthResult.Failure -> {
                                     isError = true
                                     errorMessage = if (result.isNowLockedOut) "Locked out! Try again later." else "Incorrect pattern"
-                                    if (isHapticEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
 
                                     // Intruder selfie check
                                     val isIntruderEnabled = preferencesDataSource.isIntruderDetectionEnabledFlow.first()
                                     val threshold = preferencesDataSource.intruderThresholdFlow.first()
                                     if (isIntruderEnabled && result.failedCount >= threshold) {
-                                        IntruderCaptureManager.captureSilently(activity, targetPackage, appName, result.failedCount)
+                                        IntruderCaptureManager.captureSilently(activity.applicationContext, targetPackage, appName, result.failedCount)
                                     }
 
                                     // Intruder alarm check
@@ -539,26 +516,24 @@ private fun LockScreenContent(
                             enteredPin = newPin
                             isError = false
                             errorMessage = null
-                            if (isHapticEnabled) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
 
                             if (newPin.length == configuredPinLength) {
                                 coroutineScope.launch {
                                     val result = SecurityManager.verifyPinWithResult(preferencesDataSource, newPin)
                                     when (result) {
                                         is AuthResult.Success -> {
-                                            if (isHapticEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             onUnlockSuccess()
                                         }
                                         is AuthResult.Failure -> {
                                             isError = true
                                             errorMessage = if (result.isNowLockedOut) "Locked out! Try again later." else "Incorrect PIN"
-                                            if (isHapticEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
 
                                             // Intruder selfie check
                                             val isIntruderEnabled = preferencesDataSource.isIntruderDetectionEnabledFlow.first()
                                             val threshold = preferencesDataSource.intruderThresholdFlow.first()
                                             if (isIntruderEnabled && result.failedCount >= threshold) {
-                                                IntruderCaptureManager.captureSilently(activity, targetPackage, appName, result.failedCount)
+                                                IntruderCaptureManager.captureSilently(activity.applicationContext, targetPackage, appName, result.failedCount)
                                             }
 
                                             // Intruder alarm check
@@ -590,7 +565,6 @@ private fun LockScreenContent(
                             enteredPin = enteredPin.dropLast(1)
                             isError = false
                             errorMessage = null
-                            if (isHapticEnabled) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         }
                     },
                     onBiometricClick = {

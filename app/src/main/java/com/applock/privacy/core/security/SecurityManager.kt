@@ -32,6 +32,9 @@ object SecurityManager {
         val salt = generateSalt()
         val hash = hashPin(pin, salt)
         preferencesDataSource.savePin(hash, salt)
+        preferencesDataSource.setPinLength(pin.length)
+        preferencesDataSource.setLockType("pin")
+        preferencesDataSource.clearPattern()
         preferencesDataSource.resetFailedAttempts()
     }
 
@@ -71,6 +74,8 @@ object SecurityManager {
         val salt = generateSalt()
         val hash = hashPattern(pattern, salt)
         preferencesDataSource.savePattern(hash, salt)
+        preferencesDataSource.setLockType("pattern")
+        preferencesDataSource.clearPin()
         preferencesDataSource.resetFailedAttempts()
     }
 

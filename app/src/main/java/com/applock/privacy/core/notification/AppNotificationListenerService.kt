@@ -52,9 +52,6 @@ class AppNotificationListenerService : NotificationListenerService() {
 
         serviceScope.launch {
             try {
-                val isShieldEnabled = preferencesDataSource.isNotificationShieldEnabledFlow.first()
-                if (!isShieldEnabled) return@launch
-
                 val lockedPackages = preferencesDataSource.lockedPackagesFlow.first()
                 if (lockedPackages.contains(targetPackage)) {
                     Log.i(TAG, "Intercepting sensitive notification from locked package: $targetPackage")

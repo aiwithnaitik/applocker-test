@@ -76,7 +76,6 @@ fun PatternLockView(
                             val center = Offset((col + 0.5f) * cellW, (row + 0.5f) * cellH)
                             if (hypot(startOffset.x - center.x, startOffset.y - center.y) <= hitRadiusPx) {
                                 selectedDots.add(i)
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 break
                             }
                         }
@@ -95,7 +94,6 @@ fun PatternLockView(
                                 val center = Offset((col + 0.5f) * cellW, (row + 0.5f) * cellH)
                                 if (hypot(change.position.x - center.x, change.position.y - center.y) <= hitRadiusPx) {
                                     selectedDots.add(i)
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     break
                                 }
                             }

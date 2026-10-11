@@ -3,6 +3,7 @@ package com.applock.privacy.feature.vault
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import com.applock.privacy.data.local.AppPreferencesDataSource
 import kotlinx.coroutines.Dispatchers
@@ -51,7 +52,7 @@ object MediaVaultManager {
 
             preferencesDataSource.addVaultMediaItem(item)
             true
-        } catch (_: Exception) {
+        } catch (_: Throwable) {
             false
         }
     }
@@ -65,17 +66,48 @@ object MediaVaultManager {
             if (file.exists()) {
                 file.delete()
             }
-        } catch (_: Exception) {}
+        } catch (_: Throwable) {}
         preferencesDataSource.deleteVaultMediaItem(item.id)
     }
 
-    fun loadBitmap(filePath: String): Bitmap? {
+    fun loadBitmap(filePath: String, targetSize: Int = 1080): Bitmap? {
         return try {
-            val options = BitmapFactory.Options().apply {
-                inSampleSize = 2 // Performance: downsample for smooth grid loading
+            val boundsOptions = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
             }
-            BitmapFactory.decodeFile(filePath, options)
-        } catch (_: Exception) {
+            BitmapFactory.decodeFile(filePath, boundsOptions)
+
+            val width = boundsOptions.outWidth
+            val height = boundsOptions.outHeight
+            if (width <= 0 || height <= 0) return null
+
+            var sampleSize = 1
+            while (width / sampleSize > targetSize || height / sampleSize > targetSize) {
+                sampleSize *= 2
+            }
+
+            val decodeOptions = BitmapFactory.Options().apply {
+                inSampleSize = maxOf(1, sampleSize)
+                inPreferredConfig = Bitmap.Config.RGB_565
+            }
+            BitmapFactory.decodeFile(filePath, decodeOptions)
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    fun loadThumbnail(filePath: String, isVideo: Boolean): Bitmap? {
+        return try {
+            if (isVideo) {
+                val retriever = MediaMetadataRetriever()
+                retriever.setDataSource(filePath)
+                val frame = retriever.frameAtTime
+                retriever.release()
+                frame
+            } else {
+                loadBitmap(filePath, targetSize = 360)
+            }
+        } catch (_: Throwable) {
             null
         }
     }

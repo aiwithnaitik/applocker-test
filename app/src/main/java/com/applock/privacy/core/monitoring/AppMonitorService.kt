@@ -202,9 +202,9 @@ class AppMonitorService : Service() {
                     continue
                 }
 
-                // If user is actively using AppLock itself, sleep to eliminate UI lag & Binder IPC contention
-                if (AppLockSession.isAppInForeground) {
-                    delay(1200)
+                // If user is actively using AppLock itself or transient system action is active, sleep
+                if (AppLockSession.isAppInForeground || AppLockSession.isTransientSystemAction) {
+                    delay(1000)
                     continue
                 }
 
