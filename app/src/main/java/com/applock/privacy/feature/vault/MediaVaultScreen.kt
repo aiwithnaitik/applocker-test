@@ -109,7 +109,7 @@ fun MediaVaultScreen(
     val displayedItems = if (selectedTab == VaultTab.PHOTOS) photoItems else videoItems
 
     val handleImportUris: (List<Uri>) -> Unit = { uris ->
-        AppLockSession.setTransientSystemAction(false)
+        AppLockSession.isTransientSystemAction = false
         if (uris.isNotEmpty()) {
             scope.launch {
                 isImporting = true
@@ -140,7 +140,7 @@ fun MediaVaultScreen(
     }
 
     val launchPicker: () -> Unit = {
-        AppLockSession.setTransientSystemAction(true)
+        AppLockSession.isTransientSystemAction = true
         val isVideo = selectedTab == VaultTab.VIDEOS
         try {
             val request = if (isVideo) {
@@ -153,7 +153,7 @@ fun MediaVaultScreen(
             try {
                 legacyPickerLauncher.launch(if (isVideo) "video/*" else "image/*")
             } catch (_: Throwable) {
-                AppLockSession.setTransientSystemAction(false)
+                AppLockSession.isTransientSystemAction = false
             }
         }
     }

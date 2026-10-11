@@ -27,9 +27,6 @@ object AppLockSession {
         currentLockShowingPackage = if (showing) packageName else null
     }
 
-    fun setTransientSystemAction(active: Boolean) {
-        isTransientSystemAction = active
-    }
 
     fun unlockPackage(packageName: String) {
         unlockedPackages.add(packageName)

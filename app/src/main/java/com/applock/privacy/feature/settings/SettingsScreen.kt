@@ -146,7 +146,7 @@ fun SettingsScreen(
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        AppLockSession.setTransientSystemAction(false)
+        AppLockSession.isTransientSystemAction = false
         coroutineScope.launch {
             preferencesDataSource.setIntruderDetectionEnabled(isGranted)
         }
@@ -439,7 +439,7 @@ fun SettingsScreen(
                 checked = isIntruderEnabled,
                 onCheckedChange = { enabled ->
                     if (enabled) {
-                        AppLockSession.setTransientSystemAction(true)
+                        AppLockSession.isTransientSystemAction = true
                         cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                     } else {
                         coroutineScope.launch {
