@@ -202,9 +202,9 @@ class AppMonitorService : Service() {
                     continue
                 }
 
-                // If user is actively using AppLock itself or transient system action is active, sleep
-                if (AppLockSession.isAppInForeground || AppLockSession.isTransientSystemAction) {
-                    delay(1000)
+                // If user is actively using AppLock itself, sleep to avoid UI contention
+                if (AppLockSession.isAppInForeground) {
+                    delay(800)
                     continue
                 }
 
@@ -249,11 +249,8 @@ class AppMonitorService : Service() {
                                 }
                             }
 
-                            if (foregroundPackage == lastObservedPackage) {
-                                nextDelay = 100L
-                            } else {
+                            if (foregroundPackage != null) {
                                 lastObservedPackage = foregroundPackage
-                                nextDelay = 70L
                             }
                         }
                     }
@@ -270,7 +267,7 @@ class AppMonitorService : Service() {
         lastObservedPackage: String?
     ): String? {
         val now = System.currentTimeMillis()
-        val events = usageStatsManager.queryEvents(now - 3000L, now)
+        val events = usageStatsManager.queryEvents(now - 10000L, now)
         val event = UsageEvents.Event()
 
         var latestResumedPkg: String? = null
@@ -279,7 +276,7 @@ class AppMonitorService : Service() {
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
             val pkg = event.packageName ?: continue
-            if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
+            if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED || event.eventType == 1) {
                 if (event.timeStamp >= latestResumedTime) {
                     latestResumedTime = event.timeStamp
                     latestResumedPkg = pkg
@@ -287,9 +284,21 @@ class AppMonitorService : Service() {
             }
         }
 
-        return latestResumedPkg ?: lastObservedPackage ?: run {
-            val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_BEST, now - 3000L, now)
-            stats?.maxByOrNull { it.lastTimeUsed }?.packageName
+        if (latestResumedPkg != null) {
+            return latestResumedPkg
+        }
+
+        // Fallback: Query UsageStats over a 5-minute interval
+        return try {
+            val stats = usageStatsManager.queryUsageStats(
+                UsageStatsManager.INTERVAL_DAILY,
+                now - (1000 * 60 * 5),
+                now
+            )
+            val mostRecent = stats?.maxByOrNull { it.lastTimeUsed }?.packageName
+            mostRecent ?: lastObservedPackage
+        } catch (_: Exception) {
+            lastObservedPackage
         }
     }
 }

@@ -91,6 +91,20 @@ fun PermissionScreen(
         )
     }
 
+    var showSetupWizardDialog by remember { mutableStateOf(!permissionStatus.isCorePermissionsGranted) }
+
+    if (showSetupWizardDialog) {
+        PermissionSetupDialog(
+            onDismiss = { showSetupWizardDialog = false },
+            onComplete = {
+                permissionStatus = PermissionManager.getPermissionStatus(context)
+                isAccessibilityGranted = PermissionManager.isAccessibilityServiceEnabled(context)
+                isNotificationListenerGranted = PermissionManager.isNotificationListenerGranted(context)
+                isCameraGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+            }
+        )
+    }
+
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -102,6 +116,7 @@ fun PermissionScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                AppLockSession.isTransientSystemAction = false
                 permissionStatus = PermissionManager.getPermissionStatus(context)
                 isAccessibilityGranted = PermissionManager.isAccessibilityServiceEnabled(context)
                 isNotificationListenerGranted = PermissionManager.isNotificationListenerGranted(context)
@@ -225,6 +240,60 @@ fun PermissionScreen(
                             color = TextMuted,
                             fontSize = 12.sp,
                             lineHeight = 17.sp
+                        )
+                    }
+                }
+            }
+
+            // Quick Pop-up Setup Button / Banner
+            item {
+                AppGlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    borderColor = if (isCoreReady) EmeraldSecure.copy(alpha = 0.35f) else ElectricCyan.copy(alpha = 0.5f)
+                ) {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isCoreReady) EmeraldSecure.copy(alpha = 0.15f) else ElectricCyan.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isCoreReady) Icons.Default.CheckCircle else Icons.Default.Bolt,
+                                    contentDescription = null,
+                                    tint = if (isCoreReady) EmeraldSecure else ElectricCyan,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (isCoreReady) "All Core Privileges Armed" else "1-Tap Pop-up Permission Wizard",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    text = if (isCoreReady) "Tap anytime to run system privilege diagnostics." else "Auto-chains native OS dialogs and settings pop-ups in a guided flow.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        AppGradientButton(
+                            text = if (isCoreReady) "Re-run Privilege Wizard" else "⚡ Launch 1-Tap Pop-up Setup",
+                            onClick = { showSetupWizardDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            height = 44.dp
                         )
                     }
                 }

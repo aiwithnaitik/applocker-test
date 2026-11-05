@@ -10,6 +10,10 @@ class AppLockApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // Foundation initialization for logging and dependency management
+        if (com.applock.privacy.core.permission.PermissionManager.hasUsageStatsPermission(this) &&
+            com.applock.privacy.core.permission.PermissionManager.hasOverlayPermission(this)
+        ) {
+            com.applock.privacy.core.monitoring.AppMonitorService.start(this)
+        }
     }
 }

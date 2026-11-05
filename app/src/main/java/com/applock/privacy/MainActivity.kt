@@ -52,6 +52,12 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         AppLockSession.isAppInForeground = true
+        AppLockSession.isTransientSystemAction = false
+        if (com.applock.privacy.core.permission.PermissionManager.hasUsageStatsPermission(this) &&
+            com.applock.privacy.core.permission.PermissionManager.hasOverlayPermission(this)
+        ) {
+            com.applock.privacy.core.monitoring.AppMonitorService.start(this)
+        }
     }
 
     override fun onPause() {

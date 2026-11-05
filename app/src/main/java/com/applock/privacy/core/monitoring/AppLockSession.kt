@@ -16,7 +16,23 @@ object AppLockSession {
     @Volatile var activeUnlockedPackage: String? = null
     @Volatile var lastUnlockTimestamp: Long = 0L
     @Volatile var isAppInForeground: Boolean = false
-    @Volatile var isTransientSystemAction: Boolean = false
+    @Volatile private var _isTransientSystemAction: Boolean = false
+    @Volatile private var transientActionTimestamp: Long = 0L
+
+    var isTransientSystemAction: Boolean
+        get() {
+            val active = _isTransientSystemAction
+            if (active && (System.currentTimeMillis() - transientActionTimestamp > 15_000L)) {
+                _isTransientSystemAction = false
+                return false
+            }
+            return active
+        }
+        set(value) {
+            _isTransientSystemAction = value
+            transientActionTimestamp = if (value) System.currentTimeMillis() else 0L
+        }
+
     @Volatile var isAppLockAuthenticated: Boolean = false
 
     /** Grace window (in milliseconds) immediately following a successful unlock */

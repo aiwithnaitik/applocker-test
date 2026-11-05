@@ -102,7 +102,7 @@ class WebsiteBlockerAccessibilityService : AccessibilityService() {
                 val blockedSites = preferencesDataSource.blockedWebsitesFlow.first().filter { it.isEnabled }
                 if (blockedSites.isEmpty()) return@launch
 
-                val rootNode = rootInActiveWindow ?: return@launch
+                val rootNode = rootInActiveWindow ?: event.source ?: return@launch
                 val detectedUrlText = extractUrlFromNodeTree(rootNode) ?: return@launch
 
                 for (site in blockedSites) {
@@ -127,19 +127,21 @@ class WebsiteBlockerAccessibilityService : AccessibilityService() {
 
     private fun extractUrlFromNodeTree(node: AccessibilityNodeInfo): String? {
         val viewId = node.viewIdResourceName ?: ""
+        val text = node.text?.toString() ?: node.contentDescription?.toString()
+
         // Check common browser address bar IDs
         if (viewId.contains("url_bar", ignoreCase = true) ||
             viewId.contains("location_bar", ignoreCase = true) ||
             viewId.contains("toolbar_url", ignoreCase = true) ||
-            viewId.contains("search_box", ignoreCase = true)
+            viewId.contains("search_box", ignoreCase = true) ||
+            viewId.contains("url_field", ignoreCase = true) ||
+            viewId.contains("address", ignoreCase = true)
         ) {
-            val text = node.text?.toString()
             if (!text.isNullOrBlank()) return text.lowercase()
         }
 
         // Check node text directly if it looks like a URL
-        val text = node.text?.toString()
-        if (!text.isNullOrBlank() && (text.contains(".com") || text.contains(".org") || text.contains(".net") || text.contains(".io") || text.contains("http"))) {
+        if (!text.isNullOrBlank() && (text.contains(".com") || text.contains(".org") || text.contains(".net") || text.contains(".io") || text.contains("http") || text.contains("www."))) {
             return text.lowercase()
         }
 
@@ -155,11 +157,40 @@ class WebsiteBlockerAccessibilityService : AccessibilityService() {
 
     private fun launchBlockScreen(domain: String, category: String) {
         val intent = Intent(this, BlockedSiteActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
             putExtra(BlockedSiteActivity.EXTRA_DOMAIN, domain)
             putExtra(BlockedSiteActivity.EXTRA_CATEGORY, category)
         }
-        startActivity(intent)
+
+        val options = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            android.app.ActivityOptions.makeBasic().apply {
+                setPendingIntentBackgroundActivityStartMode(android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED)
+            }
+        } else {
+            android.app.ActivityOptions.makeBasic()
+        }
+
+        val pendingIntent = android.app.PendingIntent.getActivity(
+            this,
+            domain.hashCode(),
+            intent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+
+        try {
+            pendingIntent.send(this, 0, null, null, null, null, options.toBundle())
+        } catch (_: Exception) {
+            try {
+                startActivity(intent, options.toBundle())
+            } catch (_: Exception) {
+                try {
+                    startActivity(intent)
+                } catch (_: Exception) {}
+            }
+        }
     }
 
     override fun onInterrupt() {

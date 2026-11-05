@@ -29,6 +29,13 @@ object MediaVaultManager {
         isVideo: Boolean = false
     ): Boolean = withContext(Dispatchers.IO) {
         try {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {}
+
             val vaultDir = getVaultDirectory(context)
             val id = UUID.randomUUID().toString()
             val extension = if (isVideo) ".mp4" else ".jpg"
@@ -52,7 +59,8 @@ object MediaVaultManager {
 
             preferencesDataSource.addVaultMediaItem(item)
             true
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            android.util.Log.e("MediaVaultManager", "Failed to import media from uri: $uri", t)
             false
         }
     }

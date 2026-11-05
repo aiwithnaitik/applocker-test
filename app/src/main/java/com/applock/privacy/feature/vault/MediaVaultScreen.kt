@@ -113,16 +113,33 @@ fun MediaVaultScreen(
         if (uris.isNotEmpty()) {
             scope.launch {
                 isImporting = true
+                var successCount = 0
                 val isVideo = selectedTab == VaultTab.VIDEOS
                 for (uri in uris) {
-                    MediaVaultManager.importMedia(
+                    val success = MediaVaultManager.importMedia(
                         context = context,
                         preferencesDataSource = preferencesDataSource,
                         uri = uri,
                         isVideo = isVideo
                     )
+                    if (success) successCount++
                 }
                 isImporting = false
+                withContext(Dispatchers.Main) {
+                    if (successCount > 0) {
+                        android.widget.Toast.makeText(
+                            context,
+                            "Added $successCount ${if (isVideo) "video(s)" else "photo(s)"} to Private Vault",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        android.widget.Toast.makeText(
+                            context,
+                            "Failed to import media. Please check storage access.",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
             }
         }
     }
@@ -139,7 +156,7 @@ fun MediaVaultScreen(
         handleImportUris(uris)
     }
 
-    val launchPicker: () -> Unit = {
+    fun executeLaunchPicker() {
         AppLockSession.isTransientSystemAction = true
         val isVideo = selectedTab == VaultTab.VIDEOS
         try {
@@ -155,6 +172,39 @@ fun MediaVaultScreen(
             } catch (_: Throwable) {
                 AppLockSession.isTransientSystemAction = false
             }
+        }
+    }
+
+    val storagePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        AppLockSession.isTransientSystemAction = false
+        executeLaunchPicker()
+    }
+
+    val launchPicker: () -> Unit = {
+        val permissionsNeeded = buildList {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                val perm = if (selectedTab == VaultTab.VIDEOS) {
+                    android.Manifest.permission.READ_MEDIA_VIDEO
+                } else {
+                    android.Manifest.permission.READ_MEDIA_IMAGES
+                }
+                if (androidx.core.content.ContextCompat.checkSelfPermission(context, perm) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    add(perm)
+                }
+            } else {
+                if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_EXTERNAL_STORAGE) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    add(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                }
+            }
+        }
+
+        if (permissionsNeeded.isNotEmpty()) {
+            AppLockSession.isTransientSystemAction = true
+            storagePermissionLauncher.launch(permissionsNeeded.toTypedArray())
+        } else {
+            executeLaunchPicker()
         }
     }
 

@@ -77,6 +77,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.applock.privacy.R
 import com.applock.privacy.core.monitoring.AppMonitorService
 import com.applock.privacy.core.permission.PermissionManager
+import com.applock.privacy.feature.permissions.PermissionSetupDialog
 import com.applock.privacy.core.ui.components.AppGlassCard
 import com.applock.privacy.core.ui.components.AppGradientButton
 import com.applock.privacy.core.ui.components.AppTopBar
@@ -126,7 +127,20 @@ fun HomeScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf(AppFilterTab.UNLOCKED) }
     var showPinSetupDialog by remember { mutableStateOf(false) }
+    var showPermissionSetupDialog by remember { mutableStateOf(false) }
     var pendingLockPackage by remember { mutableStateOf<String?>(null) }
+
+    if (showPermissionSetupDialog) {
+        PermissionSetupDialog(
+            onDismiss = { showPermissionSetupDialog = false },
+            onComplete = {
+                permissionStatus = PermissionManager.getPermissionStatus(context)
+                if (permissionStatus.isCorePermissionsGranted) {
+                    AppMonitorService.start(context)
+                }
+            }
+        )
+    }
 
     // Re-check permissions and restart monitor service if needed on resume
     DisposableEffect(lifecycleOwner) {
@@ -207,6 +221,8 @@ fun HomeScreen(
                         preferencesDataSource.setAppMonitorActive(true)
                         if (permissionStatus.isCorePermissionsGranted) {
                             AppMonitorService.start(context)
+                        } else {
+                            showPermissionSetupDialog = true
                         }
                     }
                 }
@@ -523,7 +539,7 @@ fun HomeScreen(
                     AppGlassCard(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onNavigateToPermissions() },
+                            .clickable { showPermissionSetupDialog = true },
                         borderColor = AmberWarning
                     ) {
                         Row(
@@ -567,8 +583,8 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.height(10.dp))
 
                         AppGradientButton(
-                            text = "Grant System Permissions →",
-                            onClick = onNavigateToPermissions,
+                            text = "⚡ Fast Pop-up Permission Setup →",
+                            onClick = { showPermissionSetupDialog = true },
                             height = 42.dp
                         )
                     }

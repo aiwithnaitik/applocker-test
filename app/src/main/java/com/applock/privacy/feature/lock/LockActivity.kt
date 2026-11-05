@@ -82,12 +82,39 @@ class LockActivity : FragmentActivity() {
             }
             val intent = Intent(context, LockActivity::class.java).apply {
                 putExtra(EXTRA_PACKAGE_NAME, packageName)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                    Intent.FLAG_ACTIVITY_NO_ANIMATION
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
             }
-            context.startActivity(intent)
+
+            val options = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                android.app.ActivityOptions.makeBasic().apply {
+                    setPendingIntentBackgroundActivityStartMode(android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED)
+                }
+            } else {
+                android.app.ActivityOptions.makeBasic()
+            }
+
+            val pendingIntent = android.app.PendingIntent.getActivity(
+                context,
+                packageName.hashCode(),
+                intent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+
+            try {
+                pendingIntent.send(context, 0, null, null, null, null, options.toBundle())
+            } catch (_: Exception) {
+                try {
+                    context.startActivity(intent, options.toBundle())
+                } catch (_: Exception) {
+                    try {
+                        context.startActivity(intent)
+                    } catch (_: Exception) {}
+                }
+            }
         }
     }
 
